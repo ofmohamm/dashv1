@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sys
+import time as time_module
 import urllib.parse
 import urllib.request
 from datetime import date, datetime, time, timedelta, timezone
@@ -62,7 +63,11 @@ def load_config() -> dict:
 
 def configured_url(config: dict) -> str:
     url = str(config.get("ics_url", "")).strip()
-    return "" if url in PLACEHOLDER_URLS else url
+    if url in PLACEHOLDER_URLS:
+        return ""
+    # Normalize at read time too, so a hand-edited config.json with a
+    # webcal:// or .html link works the same as one saved through the UI.
+    return normalize_ics_url(url)
 
 
 def normalize_ics_url(url: str) -> str:
@@ -94,6 +99,22 @@ def fetch_ics(ics_url: str) -> str:
     with urllib.request.urlopen(req, timeout=20) as res:
         charset = res.headers.get_content_charset() or "utf-8"
         return res.read().decode(charset, errors="replace")
+
+
+# Single-slot TTL cache so the dashboard's 1-minute poll doesn't hammer the
+# feed host with a fresh download on every request. validate_ics bypasses it
+# deliberately — a user testing a pasted link should get a live answer.
+ICS_CACHE_TTL_SECONDS = 55
+_ics_cache: dict = {"url": None, "fetched_at": 0.0, "raw": ""}
+
+
+def fetch_ics_cached(ics_url: str) -> str:
+    now = time_module.monotonic()
+    if _ics_cache["url"] == ics_url and now - _ics_cache["fetched_at"] < ICS_CACHE_TTL_SECONDS:
+        return _ics_cache["raw"]
+    raw = fetch_ics(ics_url)
+    _ics_cache.update(url=ics_url, fetched_at=now, raw=raw)
+    return raw
 
 
 def unfold_ics_lines(raw: str) -> list[str]:
@@ -358,18 +379,21 @@ def events_for_day(parsed_events: list[dict], day: date, zone: ZoneInfo) -> list
 def today_events(config: dict) -> dict:
     zone = get_zone(config)
     ics_url = configured_url(config)
+    # "today" is computed in the configured timezone and sent to the client,
+    # so day labels and countdowns don't depend on the browser's OS clock.
+    base_day = datetime.now(zone).date()
     if not ics_url:
         return {
             "status": "sample mode",
             "configured": False,
             "message": "Connect your Outlook calendar to replace this sample data.",
+            "today": base_day.isoformat(),
             "events": sample_events(zone),
         }
 
-    raw_ics = fetch_ics(ics_url)
+    raw_ics = fetch_ics_cached(ics_url)
     parsed_events = parse_ics(raw_ics)
     now = datetime.now(zone)
-    base_day = now.date()
 
     def upcoming_count(items: list[dict]) -> int:
         return sum(1 for e in items if datetime.fromisoformat(e["end"]) > now)
@@ -387,6 +411,7 @@ def today_events(config: dict) -> dict:
         "status": "live ICS",
         "configured": True,
         "message": "",
+        "today": base_day.isoformat(),
         "events": events,
     }
 
@@ -421,8 +446,8 @@ EDITABLE_CONFIG_KEYS = {"ics_url", "display_city", "weather", "background"}
 def public_config(config: dict) -> dict:
     return {
         "ics_url": configured_url(config),
-        "display_city": config.get("display_city", "Syracuse"),
-        "weather": config.get("weather", {"latitude": 43.0481, "longitude": -76.1474}),
+        "display_city": config.get("display_city", DEFAULT_CONFIG["display_city"]),
+        "weather": config.get("weather", DEFAULT_CONFIG["weather"]),
         "background": config.get("background", ""),
     }
 

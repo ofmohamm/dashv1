@@ -13,6 +13,7 @@
       --card-border: rgba(255, 255, 255, 0.1);
       --shadow: rgba(0, 0, 0, 0.5);
       --accent: #8aa0ff;
+      /* First-paint background; must match BACKGROUND_PRESETS[0] in the JS. */
       --bg-image: url("https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=2400&q=85");
     }
 
@@ -583,7 +584,8 @@
       cancelBtn: document.getElementById("cancelBtn")
     };
 
-    // Loaded from /api/config at boot; Syracuse defaults until then.
+    // Loaded from /api/config at boot. These placeholders mirror server.py's
+    // DEFAULT_CONFIG (keep in sync) and only drive the UI if that fetch fails.
     let config = {
       ics_url: "",
       display_city: "Syracuse",
@@ -640,19 +642,27 @@
       return `${clean(start)} – ${clean(end)}`;
     }
 
+    function localDateStr(date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    }
+
+    // "Today" as the server sees it (computed in the configured timezone and
+    // sent with each /api/events payload). Falling back to the browser clock
+    // only before the first payload arrives.
+    function serverToday() {
+      return state.today || localDateStr(new Date());
+    }
+
     function dayLabel(dateStr) {
-      const [y, m, d] = dateStr.split("-").map(Number);
-      const date = new Date(y, m - 1, d);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const diff = Math.round((date - today) / 86400000);
+      const parse = s => {
+        const [y, m, d] = s.split("-").map(Number);
+        return new Date(y, m - 1, d);
+      };
+      const date = parse(dateStr);
+      const diff = Math.round((date - parse(serverToday())) / 86400000);
       if (diff === 0) return "Today";
       if (diff === 1) return "Tomorrow";
       return date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
-    }
-
-    function localDateStr(date) {
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     }
 
     // Deterministic hero label: All day / Now / a live countdown today / Next.
@@ -664,7 +674,7 @@
       if (start <= now && end > now) return "Now";
 
       const minutes = Math.round((start - now) / 60000);
-      if (event.date === localDateStr(new Date()) && minutes > 0) {
+      if (event.date === serverToday() && minutes > 0) {
         if (minutes < 60) return `Starts in ${minutes} min`;
         const h = Math.floor(minutes / 60);
         const m = minutes % 60;
@@ -705,7 +715,7 @@
         return;
       }
 
-      const todayStr = localDateStr(new Date());
+      const todayStr = serverToday();
       const hero = upcoming[0];
       const parts = [];
 
@@ -744,18 +754,16 @@
       note.className = "more-note";
       els.events.appendChild(note);
 
-      while (cut > 0) {
-        if (children[cut - 1].classList.contains("day-header")) {
-          cut -= 1;
-          continue;
-        }
+      // Walk the cutoff upward until the note fits. cut === 0 (hide
+      // everything, show only the note) is a valid last resort — exiting
+      // without hiding anything would bring back the cut-off sliver.
+      for (; cut >= 0; cut -= 1) {
+        if (cut > 0 && children[cut - 1].classList.contains("day-header")) continue;
         children.forEach((c, i) => { c.style.display = i >= cut ? "none" : ""; });
         const hidden = children.slice(cut).filter(c => c.classList.contains("event")).length;
         note.textContent = `+${hidden} more`;
-        if (note.getBoundingClientRect().bottom <= limit + 1) return;
-        cut -= 1;
+        if (cut === 0 || note.getBoundingClientRect().bottom <= limit + 1) return;
       }
-      note.remove();
     }
 
     function renderMessage(message) {
@@ -763,7 +771,7 @@
     }
 
     // Cache the last good payload so a failed refresh keeps the screen useful.
-    const state = { events: [], setupMessage: null, lastUpdated: null, stale: false };
+    const state = { events: [], setupMessage: null, lastUpdated: null, stale: false, today: null };
 
     function renderUpdatedNote() {
       if (state.stale && state.lastUpdated) {
@@ -790,6 +798,7 @@
         if (!res.ok) throw new Error(data.message || "Calendar failed to load.");
         state.setupMessage = data.message && !data.configured ? data.message : null;
         state.events = data.events || [];
+        state.today = data.today || null;
         state.lastUpdated = Date.now();
         state.stale = false;
         render();
@@ -861,15 +870,33 @@
       }, 600);
     }
 
-    function openSettings() {
+    function populateSettingsForm() {
       els.icsInput.value = config.ics_url || "";
       setIcsStatus(config.ics_url ? "ok" : "", config.ics_url ? "✓ Calendar connected" : "");
       els.cityInput.value = config.display_city || "";
       const isPreset = BACKGROUND_PRESETS.some(p => p.url === config.background);
       els.bgInput.value = !config.background || isPreset ? "" : config.background;
       buildBgGrid(config.background || BACKGROUND_PRESETS[0].url);
+    }
+
+    // Always populate the form from a fresh server read, and keep Save
+    // disabled until it lands — otherwise opening settings before the boot
+    // config fetch finishes shows an empty ICS field, and saving any other
+    // change would silently erase the stored calendar link.
+    async function openSettings() {
       els.settingsError.textContent = "";
+      els.saveBtn.disabled = true;
       els.settingsBackdrop.classList.add("open");
+      try {
+        const res = await fetch("/api/config", { cache: "no-store" });
+        if (!res.ok) throw new Error();
+        config = await res.json();
+        populateSettingsForm();
+        els.saveBtn.disabled = false;
+      } catch {
+        populateSettingsForm();
+        els.settingsError.textContent = "Couldn't load current settings. Close and try again.";
+      }
     }
 
     function closeSettings() {
