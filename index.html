@@ -9,9 +9,9 @@
       --text: rgba(255, 255, 255, 0.94);
       --muted: rgba(255, 255, 255, 0.68);
       --faint: rgba(255, 255, 255, 0.18);
-      --card: rgba(12, 22, 34, 0.42);
-      --card-border: rgba(255, 255, 255, 0.12);
-      --shadow: rgba(0, 0, 0, 0.28);
+      --card: rgba(10, 12, 16, 0.5);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --shadow: rgba(0, 0, 0, 0.5);
       --accent: #8aa0ff;
     }
 
@@ -23,21 +23,24 @@
       color: var(--text);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       overflow: hidden;
+      /* Night-sky nature scene on a pure-black base: the image is darkest at
+         its edges, so the vignette below can melt the screen into the bezel. */
       background:
-        linear-gradient(180deg, rgba(177, 190, 201, 0.25), rgba(10, 20, 32, 0.72)),
-        linear-gradient(90deg, rgba(9, 16, 26, 0.25), rgba(9, 16, 26, 0.1)),
-        url("https://images.unsplash.com/photo-1473773508845-188df298d2d1?auto=format&fit=crop&w=2400&q=85");
-      background-size: cover;
-      background-position: center;
+        linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.45)),
+        url("https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=2400&q=85") center / cover no-repeat,
+        #000;
     }
 
+    /* Bezel-blend vignette: edges fade to true black so the display and its
+       black bezel read as one continuous surface. */
     body::before {
       content: "";
       position: fixed;
       inset: 0;
       background:
-        radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.07), transparent 23rem),
-        linear-gradient(180deg, rgba(2, 8, 16, 0.05), rgba(2, 8, 16, 0.62));
+        linear-gradient(180deg, #000, transparent 18%, transparent 78%, #000),
+        linear-gradient(90deg, #000, transparent 14%, transparent 86%, #000),
+        radial-gradient(ellipse 75% 70% at 50% 46%, transparent 55%, rgba(0, 0, 0, 0.92) 100%);
       pointer-events: none;
     }
 
@@ -259,10 +262,10 @@
       gap: 0.5rem;
       padding: 0.3rem;
       border-radius: 999px;
-      background: rgba(10, 20, 32, 0.32);
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(12, 12, 14, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       backdrop-filter: blur(18px) saturate(120%);
-      opacity: 0.62;
+      opacity: 0.55;
       transition: opacity 180ms ease;
     }
 
