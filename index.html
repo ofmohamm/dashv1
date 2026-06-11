@@ -12,6 +12,7 @@
       --card: rgba(12, 22, 34, 0.42);
       --card-border: rgba(255, 255, 255, 0.12);
       --shadow: rgba(0, 0, 0, 0.28);
+      --accent: #8aa0ff;
     }
 
     * { box-sizing: border-box; }
@@ -142,13 +143,46 @@
 
     .event.has-link:hover .event-title { text-decoration: underline; }
 
+    /* "Next up" hero, inspired by Apple's highlighted event block */
+    .event.featured {
+      border-top: 0;
+      padding: 0.92rem 1rem;
+      margin-bottom: 0.1rem;
+      border-radius: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: linear-gradient(135deg, rgba(108, 124, 240, 0.6), rgba(140, 110, 235, 0.34));
+      box-shadow: 0 0.7rem 1.8rem rgba(0, 0, 0, 0.28);
+    }
+
+    .event.featured .event-time { color: rgba(255, 255, 255, 0.86); }
+    .event.featured .event-dot { background: #fff; }
+
     .event-time {
       color: var(--muted);
       font-size: 0.82rem;
       line-height: 1.3;
       font-variant-numeric: tabular-nums;
-      margin-bottom: 0.22rem;
+      margin-top: 0.2rem;
     }
+
+    .event-dot {
+      flex: none;
+      width: 0.52rem;
+      height: 0.52rem;
+      border-radius: 50%;
+      background: var(--accent);
+      transform: translateY(-0.05rem);
+    }
+
+    .event-chevron {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 1.15rem;
+      line-height: 1;
+      font-weight: 400;
+    }
+
+    .event.featured .event-chevron { color: rgba(255, 255, 255, 0.82); }
 
     .day-header {
       color: var(--muted);
@@ -173,18 +207,6 @@
       font-weight: 670;
       letter-spacing: -0.02em;
       line-height: 1.22;
-    }
-
-    .join-chip {
-      color: var(--text);
-      background: rgba(255, 255, 255, 0.12);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 999px;
-      padding: 0.12rem 0.42rem;
-      font-size: 0.68rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
     }
 
     .event-location {
@@ -355,22 +377,24 @@
       return date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     }
 
-    function renderEventHtml(event) {
+    function renderEventHtml(event, featured) {
       const loc = event.location ? `<div class="event-location">${escapeHtml(event.location)}</div>` : "";
-      const join = event.meetingUrl ? `<span class="join-chip">open</span>` : "";
+      const chevron = event.meetingUrl ? `<span class="event-chevron" aria-hidden="true">›</span>` : "";
       const body = `
-        <div class="event-time">${formatEventTime(event)}</div>
         <div class="event-title-row">
+          <span class="event-dot" aria-hidden="true"></span>
           <div class="event-title">${escapeHtml(event.subject || "Untitled")}</div>
-          ${join}
+          ${chevron}
         </div>
+        <div class="event-time">${formatEventTime(event)}</div>
         ${loc}
       `;
 
+      const cls = `event${featured ? " featured" : ""}${event.meetingUrl ? " has-link" : ""}`;
       if (event.meetingUrl) {
-        return `<a class="event has-link" href="${escapeAttr(event.meetingUrl)}" target="_blank" rel="noopener noreferrer">${body}</a>`;
+        return `<a class="${cls}" href="${escapeAttr(event.meetingUrl)}" target="_blank" rel="noopener noreferrer">${body}</a>`;
       }
-      return `<div class="event">${body}</div>`;
+      return `<div class="${cls}">${body}</div>`;
     }
 
     function renderEvents(events) {
@@ -379,11 +403,15 @@
         return;
       }
 
+      // Highlight the current/next event as a hero block, like Apple's widget.
+      const now = Date.now();
+      const featuredIdx = events.findIndex(e => !e.isAllDay && new Date(e.end).getTime() >= now);
+
       // Apple-style fill: when today is sparse the server appends upcoming days,
       // so insert a divider whenever the day changes. Today's group stays unlabeled.
       let lastDate = null;
       const parts = [];
-      for (const event of events) {
+      events.forEach((event, i) => {
         if (event.date && event.date !== lastDate) {
           lastDate = event.date;
           const label = dayLabel(event.date);
@@ -391,8 +419,8 @@
             parts.push(`<div class="day-header">${escapeHtml(label)}</div>`);
           }
         }
-        parts.push(renderEventHtml(event));
-      }
+        parts.push(renderEventHtml(event, i === featuredIdx));
+      });
       els.events.innerHTML = parts.join("");
     }
 
