@@ -101,14 +101,9 @@
       display: grid;
       gap: 0.7rem;
       max-height: 27rem;
-      overflow: auto;
+      overflow: hidden;
       padding-right: 0.15rem;
-      scrollbar-width: none;
-      -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6rem), transparent);
-      mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6rem), transparent);
     }
-
-    .events::-webkit-scrollbar { display: none; }
 
     .event {
       display: block;
@@ -133,7 +128,6 @@
       border-radius: 1rem;
       border: 1px solid rgba(255, 255, 255, 0.16);
       background: linear-gradient(135deg, rgba(108, 124, 240, 0.6), rgba(140, 110, 235, 0.34));
-      box-shadow: 0 0.7rem 1.8rem rgba(0, 0, 0, 0.28);
     }
 
     .event.featured .event-time { color: rgba(255, 255, 255, 0.86); }
@@ -720,6 +714,19 @@
         parts.push(renderEventHtml(event, event === hero));
       }
       els.events.innerHTML = parts.join("");
+      trimOverflow();
+    }
+
+    // Hide events that don't fully fit rather than showing a cut-off sliver.
+    // The list is chronological, so from the first overflowing item onward
+    // everything is hidden; a day header left dangling at the bottom goes too.
+    function trimOverflow() {
+      const limit = els.events.getBoundingClientRect().bottom;
+      const children = [...els.events.children];
+      let cut = children.findIndex(c => c.getBoundingClientRect().bottom > limit + 1);
+      if (cut === -1) return;
+      if (cut > 0 && children[cut - 1].classList.contains("day-header")) cut -= 1;
+      children.slice(cut).forEach(c => { c.style.display = "none"; });
     }
 
     function renderMessage(message) {
