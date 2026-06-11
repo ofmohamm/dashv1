@@ -983,7 +983,15 @@
     refreshCalendar();
     setInterval(updateClock, 1000);
     setInterval(updateWeather, 15 * 60 * 1000);
-    setInterval(refreshCalendar, 5 * 60 * 1000);
+    // Poll the feed every minute (cheap: the server re-fetches the ICS link on
+    // each request). Freshness beyond this is limited by how often Microsoft
+    // regenerates the published feed, not by us.
+    setInterval(refreshCalendar, 60 * 1000);
+    // Also refresh the moment the tab becomes visible again, so waking the
+    // display or switching back to it never shows stale data.
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) refreshCalendar();
+    });
     // Re-render from cached data between fetches so the hero countdown ticks,
     // finished events fall away, and the offline note ages in real time.
     setInterval(() => { if (state.lastUpdated) render(); }, 30 * 1000);
