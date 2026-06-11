@@ -13,6 +13,7 @@
       --card-border: rgba(255, 255, 255, 0.1);
       --shadow: rgba(0, 0, 0, 0.5);
       --accent: #8aa0ff;
+      --bg-image: url("https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=2400&q=85");
     }
 
     * { box-sizing: border-box; }
@@ -23,25 +24,10 @@
       color: var(--text);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       overflow: hidden;
-      /* Night-sky nature scene on a pure-black base: the image is darkest at
-         its edges, so the vignette below can melt the screen into the bezel. */
       background:
         linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.45)),
-        url("https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=2400&q=85") center / cover no-repeat,
+        var(--bg-image) center / cover no-repeat,
         #000;
-    }
-
-    /* Bezel-blend vignette: edges fade to true black so the display and its
-       black bezel read as one continuous surface. */
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      background:
-        linear-gradient(180deg, #000, transparent 18%, transparent 78%, #000),
-        linear-gradient(90deg, #000, transparent 14%, transparent 86%, #000),
-        radial-gradient(ellipse 75% 70% at 50% 46%, transparent 55%, rgba(0, 0, 0, 0.92) 100%);
-      pointer-events: none;
     }
 
     .dashboard {
@@ -271,35 +257,141 @@
 
     .controls:hover { opacity: 1; }
 
-    button {
+    .icon-btn {
+      display: grid;
+      place-items: center;
+      width: 2.35rem;
+      height: 2.35rem;
       color: var(--text);
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 999px;
-      padding: 0.5rem 0.95rem;
       font: inherit;
-      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .icon-btn:hover { background: rgba(255, 255, 255, 0.18); }
+
+    .icon-btn svg {
+      width: 1.05rem;
+      height: 1.05rem;
+    }
+
+    .hide-ui .controls {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Settings panel */
+    .settings-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(6px);
+      z-index: 10;
+    }
+
+    .settings-backdrop.open { display: grid; }
+
+    .settings {
+      width: min(92vw, 26rem);
+      max-height: 88vh;
+      overflow: auto;
+      padding: 1.5rem;
+      border-radius: 1.4rem;
+      border: 1px solid var(--card-border);
+      background: rgba(12, 14, 18, 0.92);
+      box-shadow: 0 2rem 7rem rgba(0, 0, 0, 0.6);
+      scrollbar-width: none;
+    }
+
+    .settings::-webkit-scrollbar { display: none; }
+
+    .settings h2 {
+      margin: 0 0 1.1rem;
+      font-size: 1.2rem;
+      letter-spacing: -0.02em;
+    }
+
+    .settings label {
+      display: block;
+      margin: 0.9rem 0 0.35rem;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .settings input[type="text"] {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border-radius: 0.7rem;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.85rem;
+    }
+
+    .settings input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .bg-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+
+    .bg-option {
+      position: relative;
+      aspect-ratio: 16 / 10;
+      border-radius: 0.6rem;
+      border: 2px solid transparent;
+      background-size: cover;
+      background-position: center;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .bg-option.selected { border-color: var(--accent); }
+
+    .settings-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.6rem;
+      margin-top: 1.4rem;
+    }
+
+    .settings-actions button {
+      padding: 0.55rem 1.1rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.85rem;
       font-weight: 600;
       cursor: pointer;
     }
 
-    button:hover { background: rgba(255, 255, 255, 0.18); }
+    .settings-actions button:hover { background: rgba(255, 255, 255, 0.16); }
 
-    .hint {
-      position: fixed;
-      left: 50%;
-      bottom: 1.4rem;
-      transform: translateX(-50%);
-      color: rgba(255, 255, 255, 0.72);
-      font-size: 0.76rem;
-      letter-spacing: 0.01em;
-      text-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.55);
+    .settings-actions .primary {
+      background: var(--accent);
+      border-color: transparent;
+      color: #0b1020;
     }
 
-    .hide-ui .controls,
-    .hide-ui .hint {
-      opacity: 0;
-      pointer-events: none;
+    .settings-actions .primary:hover { background: #a3b4ff; }
+
+    .settings-error {
+      color: #ff9c9c;
+      font-size: 0.8rem;
+      margin-top: 0.8rem;
+      min-height: 1em;
     }
 
     @media (max-width: 980px) {
@@ -338,13 +430,49 @@
   </main>
 
   <div class="controls">
-    <button id="refreshBtn" type="button">Refresh</button>
-    <button id="fullscreenBtn" type="button">Fullscreen</button>
+    <button class="icon-btn" id="editBtn" type="button" title="Edit settings" aria-label="Edit settings">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M16.9 3.9a2.1 2.1 0 0 1 3 3L8.5 18.3 4 19.8l1.5-4.5L16.9 3.9Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="icon-btn" id="fullscreenBtn" type="button" title="Toggle fullscreen" aria-label="Toggle fullscreen">
+      <svg id="expandIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <svg id="collapseIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="display:none">
+        <path d="M4 9h5V4M20 9h-5V4M4 15h5v5M20 15h-5v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
   </div>
-  <div class="hint">Click an event to join · F11 for fullscreen</div>
+
+  <div class="settings-backdrop" id="settingsBackdrop">
+    <div class="settings" role="dialog" aria-label="Dashboard settings">
+      <h2>Settings</h2>
+      <label for="icsInput">Outlook ICS link</label>
+      <input type="text" id="icsInput" placeholder="https://outlook.office365.com/owa/calendar/…/calendar.ics" spellcheck="false" />
+      <label for="cityInput">Weather location</label>
+      <input type="text" id="cityInput" placeholder="City name, e.g. Syracuse" />
+      <label>Background</label>
+      <div class="bg-grid" id="bgGrid"></div>
+      <label for="bgInput">Custom background URL (optional)</label>
+      <input type="text" id="bgInput" placeholder="https://images.unsplash.com/…" spellcheck="false" />
+      <div class="settings-error" id="settingsError"></div>
+      <div class="settings-actions">
+        <button type="button" id="cancelBtn">Cancel</button>
+        <button type="button" class="primary" id="saveBtn">Save</button>
+      </div>
+    </div>
+  </div>
 
   <script>
-    const WEATHER = { city: "Syracuse", latitude: 43.0481, longitude: -76.1474 };
+    const BACKGROUND_PRESETS = [
+      { name: "Night sky", url: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=2400&q=85" },
+      { name: "Forest road", url: "https://images.unsplash.com/photo-1473773508845-188df298d2d1?auto=format&fit=crop&w=2400&q=85" },
+      { name: "Mountain lake", url: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=2400&q=85" },
+      { name: "Foggy forest", url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=2400&q=85" },
+      { name: "Aurora", url: "https://images.unsplash.com/photo-1483347756197-71ef80e95f73?auto=format&fit=crop&w=2400&q=85" },
+      { name: "Misty peaks", url: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?auto=format&fit=crop&w=2400&q=85" }
+    ];
 
     const els = {
       time: document.getElementById("time"),
@@ -353,9 +481,41 @@
       city: document.getElementById("city"),
       events: document.getElementById("events"),
       updated: document.getElementById("updated"),
-      refreshBtn: document.getElementById("refreshBtn"),
-      fullscreenBtn: document.getElementById("fullscreenBtn")
+      fullscreenBtn: document.getElementById("fullscreenBtn"),
+      expandIcon: document.getElementById("expandIcon"),
+      collapseIcon: document.getElementById("collapseIcon"),
+      editBtn: document.getElementById("editBtn"),
+      settingsBackdrop: document.getElementById("settingsBackdrop"),
+      icsInput: document.getElementById("icsInput"),
+      cityInput: document.getElementById("cityInput"),
+      bgGrid: document.getElementById("bgGrid"),
+      bgInput: document.getElementById("bgInput"),
+      settingsError: document.getElementById("settingsError"),
+      saveBtn: document.getElementById("saveBtn"),
+      cancelBtn: document.getElementById("cancelBtn")
     };
+
+    // Loaded from /api/config at boot; Syracuse defaults until then.
+    let config = {
+      ics_url: "",
+      display_city: "Syracuse",
+      weather: { latitude: 43.0481, longitude: -76.1474 },
+      background: ""
+    };
+
+    function applyBackground() {
+      const url = config.background || BACKGROUND_PRESETS[0].url;
+      document.documentElement.style.setProperty("--bg-image", `url("${url.replaceAll('"', "")}")`);
+    }
+
+    async function loadConfig() {
+      try {
+        const res = await fetch("/api/config", { cache: "no-store" });
+        if (res.ok) config = await res.json();
+      } catch { /* keep defaults */ }
+      applyBackground();
+      updateWeather();
+    }
 
     function updateClock() {
       const now = new Date();
@@ -372,9 +532,9 @@
     }
 
     async function updateWeather() {
-      els.city.textContent = WEATHER.city;
+      els.city.textContent = config.display_city;
       try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER.latitude}&longitude=${WEATHER.longitude}&current=temperature_2m&temperature_unit=fahrenheit`;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${config.weather.latitude}&longitude=${config.weather.longitude}&current=temperature_2m&temperature_unit=fahrenheit`;
         const res = await fetch(url);
         const data = await res.json();
         els.temp.textContent = `${Math.round(data.current.temperature_2m)}°`;
@@ -536,6 +696,98 @@
       }
     }
 
+    // Keep the fullscreen icon honest, even when F11 / Esc bypass our button.
+    function syncFullscreenIcon() {
+      const fs = Boolean(document.fullscreenElement);
+      els.expandIcon.style.display = fs ? "none" : "";
+      els.collapseIcon.style.display = fs ? "" : "none";
+    }
+
+    /* ---------- Settings panel ---------- */
+
+    function openSettings() {
+      els.icsInput.value = config.ics_url || "";
+      els.cityInput.value = config.display_city || "";
+      const isPreset = BACKGROUND_PRESETS.some(p => p.url === config.background);
+      els.bgInput.value = !config.background || isPreset ? "" : config.background;
+      buildBgGrid(config.background || BACKGROUND_PRESETS[0].url);
+      els.settingsError.textContent = "";
+      els.settingsBackdrop.classList.add("open");
+    }
+
+    function closeSettings() {
+      els.settingsBackdrop.classList.remove("open");
+    }
+
+    function buildBgGrid(selectedUrl) {
+      els.bgGrid.innerHTML = "";
+      for (const preset of BACKGROUND_PRESETS) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "bg-option" + (preset.url === selectedUrl ? " selected" : "");
+        btn.title = preset.name;
+        btn.style.backgroundImage = `url("${preset.url.replace("w=2400", "w=400")}")`;
+        btn.addEventListener("click", () => {
+          els.bgInput.value = "";
+          buildBgGrid(preset.url);
+        });
+        btn.dataset.url = preset.url;
+        els.bgGrid.appendChild(btn);
+      }
+    }
+
+    function selectedBackground() {
+      const custom = els.bgInput.value.trim();
+      if (custom) return custom;
+      const chosen = els.bgGrid.querySelector(".bg-option.selected");
+      return chosen ? chosen.dataset.url : "";
+    }
+
+    async function geocodeCity(name) {
+      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const hit = data.results && data.results[0];
+      if (!hit) throw new Error(`Couldn't find "${name}". Try another city name.`);
+      return { city: hit.name, latitude: hit.latitude, longitude: hit.longitude };
+    }
+
+    async function saveSettings() {
+      els.settingsError.textContent = "";
+      els.saveBtn.disabled = true;
+      try {
+        const updates = {
+          ics_url: els.icsInput.value.trim(),
+          background: selectedBackground()
+        };
+
+        const cityName = els.cityInput.value.trim();
+        if (cityName && cityName !== config.display_city) {
+          const place = await geocodeCity(cityName);
+          updates.display_city = place.city;
+          updates.weather = { latitude: place.latitude, longitude: place.longitude };
+        }
+
+        const res = await fetch("/api/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updates)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Could not save settings.");
+
+        config = data;
+        applyBackground();
+        updateWeather();
+        refreshCalendar();
+        closeSettings();
+      } catch (error) {
+        els.settingsError.textContent = error.message || String(error);
+      } finally {
+        els.saveBtn.disabled = false;
+      }
+    }
+
     function escapeHtml(value) {
       return String(value)
         .replaceAll("&", "&amp;")
@@ -549,8 +801,17 @@
       return escapeHtml(value).replaceAll("`", "&#096;");
     }
 
-    els.refreshBtn.addEventListener("click", refreshCalendar);
     els.fullscreenBtn.addEventListener("click", toggleFullscreen);
+    document.addEventListener("fullscreenchange", syncFullscreenIcon);
+    els.editBtn.addEventListener("click", openSettings);
+    els.cancelBtn.addEventListener("click", closeSettings);
+    els.saveBtn.addEventListener("click", saveSettings);
+    els.settingsBackdrop.addEventListener("click", e => {
+      if (e.target === els.settingsBackdrop) closeSettings();
+    });
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") closeSettings();
+    });
 
     let hideTimer;
     window.addEventListener("mousemove", () => {
@@ -560,7 +821,7 @@
     });
 
     updateClock();
-    updateWeather();
+    loadConfig();
     refreshCalendar();
     setInterval(updateClock, 1000);
     setInterval(updateWeather, 15 * 60 * 1000);

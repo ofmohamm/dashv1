@@ -393,6 +393,29 @@ def sample_events(zone: ZoneInfo) -> list[dict]:
     ]
 
 
+# Settings the dashboard's edit panel is allowed to change.
+EDITABLE_CONFIG_KEYS = {"ics_url", "display_city", "weather", "background"}
+
+
+def public_config(config: dict) -> dict:
+    return {
+        "ics_url": configured_url(config),
+        "display_city": config.get("display_city", "Syracuse"),
+        "weather": config.get("weather", {"latitude": 43.0481, "longitude": -76.1474}),
+        "background": config.get("background", ""),
+    }
+
+
+def save_config(updates: dict) -> dict:
+    config = load_config()
+    for key in EDITABLE_CONFIG_KEYS & updates.keys():
+        config[key] = updates[key]
+    with CONFIG_PATH.open("w", encoding="utf-8") as f:
+        json.dump(config, f, indent=2)
+        f.write("\n")
+    return config
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "LocalDashboard/1.0"
 
@@ -400,6 +423,9 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == "/api/events":
             self.handle_events()
+            return
+        if parsed.path == "/api/config":
+            self.send_json(public_config(load_config()))
             return
         if parsed.path in {"/", "/index.html"}:
             self.serve_file(ROOT / "index.html", "text/html; charset=utf-8")
@@ -409,6 +435,21 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         self.send_error(HTTPStatus.NOT_FOUND)
+
+    def do_POST(self) -> None:
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path != "/api/config":
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            updates = json.loads(self.rfile.read(length).decode("utf-8"))
+            if not isinstance(updates, dict):
+                raise ValueError("Expected a JSON object.")
+            config = save_config(updates)
+            self.send_json(public_config(config))
+        except Exception as error:
+            self.send_json({"message": str(error)}, status=HTTPStatus.BAD_REQUEST)
 
     def handle_events(self) -> None:
         try:
