@@ -1,12 +1,9 @@
-# Calendar Dashboard
+# Dash v1
 
-A full-screen desk display that shows the time, local weather, and your
-upcoming Outlook calendar events — with the current or next event highlighted
-and a live countdown. Runs as a small local web page; nothing is exposed to
-the internet.
+A smart display that shows the time, weather, and
+upcoming Outlook calendar events. Runs as a small local web page, fully on device.
 
-<!-- Add a screenshot here -->
-<!-- ![Dashboard screenshot](docs/screenshot.png) -->
+<img width="2724" height="1563" alt="dashboard1" src="https://github.com/user-attachments/assets/3cd4ac98-7993-411a-8c05-2fd212a97dfd" />
 
 ## Setup
 
@@ -24,11 +21,13 @@ the internet.
    ```
 
 3. Click the ✎ (edit) button in the top-right. The settings panel walks you
-   through connecting your Outlook calendar (it links you straight to
-   Outlook's publish page and checks the link you paste), and also lets you
-   set your weather city and pick a background.
+   through connecting your Outlook calendar, and also lets you
+   set your city and pick a background.
 
 Press `F11` (or the fullscreen button, top-right) for a clean display.
+
+<img width="2717" height="1563" alt="dashboard2" src="https://github.com/user-attachments/assets/a0fc785b-f6c8-413a-a264-0f8b8c1d3113" />
+
 
 ## What it does
 
@@ -42,7 +41,7 @@ Press `F11` (or the fullscreen button, top-right) for a clean display.
   wakes). If the network drops, the last agenda stays up with an
   "Offline · updated Nm ago" note.
 
-## Run it in the background (Windows)
+## Run it in the background (Optional - for Windows only)
 
 So the dashboard keeps running after you close the terminal and starts itself
 when you log in:
@@ -64,10 +63,8 @@ powershell -ExecutionPolicy Bypass -File scripts\uninstall-windows.ps1
 
 ## Notes
 
-- Settings are saved to `config.json` in this folder. Your calendar link is
-  private — keep that file out of git (it's already in `.gitignore`).
+- Your settings are saved privately to `config.json`.
 - Outlook regenerates published calendar feeds on its own schedule, so a
-  brand-new event can take a while to appear no matter how often the
-  dashboard polls.
-- If nothing shows up, open `http://127.0.0.1:5173/api/events` to see the raw
+  brand-new event can take a while to appear.
+- If nothing shows up, check `http://127.0.0.1:5173/api/events` to see the raw
   data or error.
