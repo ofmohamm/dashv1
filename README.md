@@ -3,7 +3,7 @@
 A smart display that shows the time, weather, and
 upcoming Outlook calendar events. Runs as a small local web page, fully on device.
 
-## Features
+### Features
 
 - **Agenda** : today's upcoming events, rolling into the next days.
 - **Click to join** : events with a Teams/Zoom/Meet link open directly from dashboard.
