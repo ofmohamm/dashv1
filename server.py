@@ -40,6 +40,12 @@ MEETING_DOMAIN_PRIORITY = (
 
 TEXT_FIELDS_FOR_LINKS = ("URL", "LOCATION", "DESCRIPTION", "X-ALT-DESC")
 
+# Apple-style agenda fill: when the current day is sparse, keep pulling in
+# upcoming days (up to MAX_LOOKAHEAD_DAYS ahead) until we have at least
+# MIN_AGENDA_EVENTS to show.
+MIN_AGENDA_EVENTS = 3
+MAX_LOOKAHEAD_DAYS = 7
+
 
 def load_config() -> dict:
     path = CONFIG_PATH if CONFIG_PATH.exists() else EXAMPLE_CONFIG_PATH
@@ -318,6 +324,16 @@ def find_meeting_url(event: dict) -> str:
     return cleaned_urls[0] if cleaned_urls else ""
 
 
+def events_for_day(parsed_events: list[dict], day: date, zone: ZoneInfo) -> list[dict]:
+    items: list[dict] = []
+    for event in parsed_events:
+        items.extend(expand_event_for_day(event, day, zone))
+    items.sort(key=lambda e: e["start"])
+    for item in items:
+        item["date"] = day.isoformat()
+    return items
+
+
 def today_events(config: dict) -> dict:
     zone = get_zone(config)
     ics_url = configured_url(config)
@@ -330,12 +346,22 @@ def today_events(config: dict) -> dict:
         }
 
     raw_ics = fetch_ics(ics_url)
-    requested_day = datetime.now(zone).date()
-    events = []
-    for event in parse_ics(raw_ics):
-        events.extend(expand_event_for_day(event, requested_day, zone))
+    parsed_events = parse_ics(raw_ics)
+    now = datetime.now(zone)
+    base_day = now.date()
 
-    events.sort(key=lambda e: e["start"])
+    def upcoming_count(items: list[dict]) -> int:
+        return sum(1 for e in items if datetime.fromisoformat(e["end"]) > now)
+
+    # Fill the agenda until there are enough *upcoming* events to show. Counting
+    # upcoming (not total) means a day full of finished meetings still rolls the
+    # view forward into tomorrow, matching the "hide past events" behavior.
+    events = events_for_day(parsed_events, base_day, zone)
+    offset = 1
+    while upcoming_count(events) < MIN_AGENDA_EVENTS and offset <= MAX_LOOKAHEAD_DAYS:
+        events.extend(events_for_day(parsed_events, base_day + timedelta(days=offset), zone))
+        offset += 1
+
     return {
         "status": "live ICS",
         "configured": True,
@@ -357,6 +383,7 @@ def sample_events(zone: ZoneInfo) -> list[dict]:
             "location": location,
             "isAllDay": False,
             "meetingUrl": link,
+            "date": today.isoformat(),
         }
 
     return [
