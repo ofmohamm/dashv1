@@ -58,6 +58,20 @@ def configured_url(config: dict) -> str:
     return "" if url in PLACEHOLDER_URLS else url
 
 
+def normalize_ics_url(url: str) -> str:
+    """Accept whatever the user pasted and coerce it into a fetchable ICS URL.
+
+    Handles webcal:// links, the published calendar's HTML variant, and stray
+    quotes/whitespace, so users don't need to know what an "ICS link" is.
+    """
+    url = url.strip().strip("\"'").strip()
+    if url.lower().startswith("webcal://"):
+        url = "https://" + url[len("webcal://"):]
+    if url.lower().endswith("calendar.html"):
+        url = url[: -len("calendar.html")] + "calendar.ics"
+    return url
+
+
 def get_zone(config: dict) -> ZoneInfo:
     return ZoneInfo(config.get("timezone", "America/New_York"))
 
@@ -410,10 +424,40 @@ def save_config(updates: dict) -> dict:
     config = load_config()
     for key in EDITABLE_CONFIG_KEYS & updates.keys():
         config[key] = updates[key]
+    if "ics_url" in updates:
+        config["ics_url"] = normalize_ics_url(str(updates["ics_url"]))
     with CONFIG_PATH.open("w", encoding="utf-8") as f:
         json.dump(config, f, indent=2)
         f.write("\n")
     return config
+
+
+def validate_ics(url: str) -> dict:
+    """Try a pasted link and report back in plain English."""
+    normalized = normalize_ics_url(url)
+    if not normalized:
+        return {"ok": False, "message": "Paste the link Outlook gave you."}
+    if not normalized.lower().startswith(("https://", "http://")):
+        return {"ok": False, "message": "That doesn't look like a web link. It should start with https:// or webcal://."}
+
+    try:
+        raw = fetch_ics(normalized)
+    except Exception:
+        return {"ok": False, "message": "Couldn't reach that link. Double-check you copied the whole ICS link from Outlook."}
+
+    if "BEGIN:VCALENDAR" not in raw:
+        return {"ok": False, "message": "That link doesn't point to a calendar. In Outlook, copy the ICS link (not the HTML one)."}
+
+    config = load_config()
+    zone = get_zone(config)
+    parsed = parse_ics(raw)
+    today = datetime.now(zone).date()
+    upcoming = sum(
+        len(expand_event_for_day(event, today + timedelta(days=offset), zone))
+        for event in parsed
+        for offset in range(7)
+    )
+    return {"ok": True, "url": normalized, "total": len(parsed), "upcoming": upcoming}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -438,16 +482,19 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
-        if parsed.path != "/api/config":
+        if parsed.path not in {"/api/config", "/api/validate-ics"}:
             self.send_error(HTTPStatus.NOT_FOUND)
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
-            updates = json.loads(self.rfile.read(length).decode("utf-8"))
-            if not isinstance(updates, dict):
+            body = json.loads(self.rfile.read(length).decode("utf-8"))
+            if not isinstance(body, dict):
                 raise ValueError("Expected a JSON object.")
-            config = save_config(updates)
-            self.send_json(public_config(config))
+            if parsed.path == "/api/validate-ics":
+                self.send_json(validate_ics(str(body.get("url", ""))))
+            else:
+                config = save_config(body)
+                self.send_json(public_config(config))
         except Exception as error:
             self.send_json({"message": str(error)}, status=HTTPStatus.BAD_REQUEST)
 

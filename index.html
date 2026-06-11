@@ -383,6 +383,68 @@
 
     .settings-actions .primary:hover { background: #a3b4ff; }
 
+    .wizard {
+      display: grid;
+      gap: 0.7rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .wizard strong { color: var(--text); }
+
+    .wizard-step {
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      flex: none;
+      display: grid;
+      place-items: center;
+      width: 1.3rem;
+      height: 1.3rem;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: var(--text);
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .wizard-links {
+      display: flex;
+      gap: 0.45rem;
+      margin-top: 0.4rem;
+    }
+
+    .chip-link {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+      padding: 0.28rem 0.7rem;
+      font-size: 0.76rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .chip-link:hover { background: rgba(255, 255, 255, 0.18); }
+
+    .wizard-paste { flex: 1; }
+
+    .wizard-paste input { margin-top: 0.4rem; }
+
+    .ics-status {
+      margin-top: 0.4rem;
+      font-size: 0.78rem;
+      min-height: 1em;
+    }
+
+    .ics-status.ok { color: #9ee6a8; }
+    .ics-status.bad { color: #ff9c9c; }
+
     .settings-error {
       color: #ff9c9c;
       font-size: 0.8rem;
@@ -444,8 +506,31 @@
   <div class="settings-backdrop" id="settingsBackdrop">
     <div class="settings" role="dialog" aria-label="Dashboard settings">
       <h2>Settings</h2>
-      <label for="icsInput">Outlook ICS link</label>
-      <input type="text" id="icsInput" placeholder="https://outlook.office365.com/owa/calendar/…/calendar.ics" spellcheck="false" />
+      <label>Connect your Outlook calendar</label>
+      <div class="wizard">
+        <div class="wizard-step">
+          <span class="step-num">1</span>
+          <div>
+            Open Outlook's calendar publishing page:
+            <div class="wizard-links">
+              <a class="chip-link" href="https://outlook.office.com/calendar/options/calendar/SharedCalendars" target="_blank" rel="noopener noreferrer">Work account</a>
+              <a class="chip-link" href="https://outlook.live.com/calendar/options/calendar/shared" target="_blank" rel="noopener noreferrer">Personal account</a>
+            </div>
+          </div>
+        </div>
+        <div class="wizard-step">
+          <span class="step-num">2</span>
+          <div>Under <strong>Publish a calendar</strong>, pick your calendar, choose <strong>Can view all details</strong>, click <strong>Publish</strong>, then copy the <strong>ICS</strong> link.</div>
+        </div>
+        <div class="wizard-step">
+          <span class="step-num">3</span>
+          <div class="wizard-paste">
+            Paste the link here:
+            <input type="text" id="icsInput" placeholder="Paste your calendar link" spellcheck="false" />
+            <div class="ics-status" id="icsStatus"></div>
+          </div>
+        </div>
+      </div>
       <label for="cityInput">Weather location</label>
       <input type="text" id="cityInput" placeholder="City name, e.g. Syracuse" />
       <label>Background</label>
@@ -483,6 +568,7 @@
       editBtn: document.getElementById("editBtn"),
       settingsBackdrop: document.getElementById("settingsBackdrop"),
       icsInput: document.getElementById("icsInput"),
+      icsStatus: document.getElementById("icsStatus"),
       cityInput: document.getElementById("cityInput"),
       bgGrid: document.getElementById("bgGrid"),
       bgInput: document.getElementById("bgInput"),
@@ -701,8 +787,47 @@
 
     /* ---------- Settings panel ---------- */
 
+    function setIcsStatus(kind, text) {
+      els.icsStatus.className = "ics-status" + (kind ? ` ${kind}` : "");
+      els.icsStatus.textContent = text;
+    }
+
+    // Check pasted links as the user types, with friendly plain-English results.
+    let validateTimer;
+    let validateSeq = 0;
+    function scheduleIcsValidation() {
+      clearTimeout(validateTimer);
+      const value = els.icsInput.value.trim();
+      if (!value) {
+        setIcsStatus("", "");
+        return;
+      }
+      setIcsStatus("", "Checking…");
+      validateTimer = setTimeout(async () => {
+        const seq = ++validateSeq;
+        try {
+          const res = await fetch("/api/validate-ics", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: value })
+          });
+          const data = await res.json();
+          if (seq !== validateSeq) return; // a newer check superseded this one
+          if (data.ok) {
+            els.icsInput.value = data.url;
+            setIcsStatus("ok", `✓ Found your calendar — ${data.upcoming} event${data.upcoming === 1 ? "" : "s"} in the next 7 days`);
+          } else {
+            setIcsStatus("bad", data.message || "That link didn't work.");
+          }
+        } catch {
+          if (seq === validateSeq) setIcsStatus("bad", "Couldn't check the link. Is the dashboard server running?");
+        }
+      }, 600);
+    }
+
     function openSettings() {
       els.icsInput.value = config.ics_url || "";
+      setIcsStatus(config.ics_url ? "ok" : "", config.ics_url ? "✓ Calendar connected" : "");
       els.cityInput.value = config.display_city || "";
       const isPreset = BACKGROUND_PRESETS.some(p => p.url === config.background);
       els.bgInput.value = !config.background || isPreset ? "" : config.background;
@@ -797,6 +922,7 @@
       return escapeHtml(value).replaceAll("`", "&#096;");
     }
 
+    els.icsInput.addEventListener("input", scheduleIcsValidation);
     els.fullscreenBtn.addEventListener("click", toggleFullscreen);
     document.addEventListener("fullscreenchange", syncFullscreenIcon);
     els.editBtn.addEventListener("click", openSettings);
