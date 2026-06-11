@@ -3,6 +3,11 @@
 A smart display that shows the time, weather, and
 upcoming Outlook calendar events. Runs as a small local web page, fully on device.
 
+## Features
+
+- **Agenda** : today's upcoming events, rolling into the next days.
+- **Click to join** : events with a Teams/Zoom/Meet link open directly from dashboard.
+
 <img width="2724" height="1563" alt="dashboard1" src="https://github.com/user-attachments/assets/3cd4ac98-7993-411a-8c05-2fd212a97dfd" />
 
 ## Setup
@@ -28,18 +33,6 @@ Press `F11` (or the fullscreen button, top-right) for a clean display.
 
 <img width="2717" height="1563" alt="dashboard2" src="https://github.com/user-attachments/assets/a0fc785b-f6c8-413a-a264-0f8b8c1d3113" />
 
-
-## What it does
-
-- **Agenda** — today's upcoming events, rolling into the next days when today
-  is quiet ("No more events today"). Past events drop off automatically;
-  anything that doesn't fit shows as "+N more".
-- **Next up** — the current or next event is marked with an accent rail and a
-  live label: "Now", "Starts in 24 min", or "Next".
-- **Click to join** — events with a Teams/Zoom/Meet link open it directly.
-- **Always fresh** — refreshes every minute (and instantly when the screen
-  wakes). If the network drops, the last agenda stays up with an
-  "Offline · updated Nm ago" note.
 
 ## Run it in the background (Optional - for Windows only)
 
