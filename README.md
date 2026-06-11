@@ -1,82 +1,35 @@
-# Syracuse ICS Dashboard
+# Calendar Dashboard
 
-A local web dashboard with the same calm Tabliss-style vibe: large clock, Syracuse weather, and a glass Outlook agenda card.
+A simple full-screen wall/desk display that shows the time, local weather, and your upcoming calendar events. It reads your calendar from an Outlook **ICS link** and runs as a small local web page — nothing is exposed to the internet.
 
-This version uses your Outlook **ICS link**, not Microsoft Graph / Entra.
-
-## Why this version
-
-- No Microsoft app registration.
-- No Entra access needed.
-- Calendar fetch happens from a local Python server on your own machine.
-- The dashboard runs at `127.0.0.1`, so it is not exposed to your Wi-Fi network.
-- If an event description/location has a Teams, Zoom, Meet, Webex, or other meeting URL, clicking the event opens that link.
+<!-- Add a screenshot here -->
+<!-- ![Dashboard screenshot](docs/screenshot.png) -->
 
 ## Setup
 
-1. Open `config.json`.
-2. Replace this:
+1. Open `config.json` and paste your Outlook ICS link between the quotes:
 
-```json
-"ics_url": "PASTE_ICS_LINK_HERE"
-```
+   ```json
+   "ics_url": "https://outlook.office365.com/owa/calendar/.../calendar.ics"
+   ```
 
-with your Outlook ICS link.
+2. Start the server from this folder:
 
-Keep the link inside the quotes.
+   ```bash
+   python3 server.py      # Mac/Linux
+   py server.py           # Windows
+   ```
 
-## Run locally
+3. Open the dashboard in your browser:
 
-From the dashboard folder:
+   ```text
+   http://127.0.0.1:5173/
+   ```
 
-### Windows
+Press `F11` (or the **Fullscreen** button, top-right) for a clean display.
 
-```bash
-py server.py
-```
+## Notes
 
-### Mac/Linux
-
-```bash
-python3 server.py
-```
-
-Then open:
-
-```text
-http://127.0.0.1:5173/
-```
-
-## Fullscreen
-
-- Click the `Fullscreen` button in the top-right, or
-- Press `F11` in Chrome/Edge.
-
-## Make it feel like a dedicated display
-
-In Chrome/Edge, open:
-
-```text
-http://127.0.0.1:5173/
-```
-
-Then press `F11`.
-
-You can also create a desktop shortcut to that URL and place it on the second display.
-
-## Privacy notes
-
-Your ICS link is a secret URL. Anyone with that link could see whatever calendar detail level you published. Keep `config.json` private and do not upload it to GitHub.
-
-The `.gitignore` file ignores `config.json` so you do not accidentally commit your private link.
-
-## Recurring events
-
-One-off events work. Simple daily and weekly recurring events are also supported. More complex recurrence rules may not display perfectly.
-
-## If events do not show
-
-- Make sure the ICS link is pasted into `config.json`.
-- Stop and restart `server.py` after editing `config.json`.
-- Open `http://127.0.0.1:5173/api/events` to see the raw event output or error.
-- If the ICS link starts with `webcal://`, change it to `https://`.
+- Your ICS link is private — keep `config.json` out of git (it's already in `.gitignore`).
+- After editing `config.json`, restart `server.py`.
+- If nothing shows up, open `http://127.0.0.1:5173/api/events` to see the raw data or error. If your link starts with `webcal://`, change it to `https://`.
