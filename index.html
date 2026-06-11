@@ -771,7 +771,7 @@
 
     function render() {
       if (state.setupMessage) {
-        renderMessage(`<strong>ICS setup needed.</strong><br>${escapeHtml(state.setupMessage)}<br><br>Edit <code>config.json</code>, then refresh.`);
+        renderMessage(`<strong>No calendar connected.</strong><br>${escapeHtml(state.setupMessage)}<br><br>Click the ✎ button in the top-right to set it up.`);
       } else {
         renderAgenda(state.events);
       }

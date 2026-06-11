@@ -16,7 +16,13 @@ from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = ROOT / "config.json"
-EXAMPLE_CONFIG_PATH = ROOT / "config.example.json"
+
+DEFAULT_CONFIG = {
+    "ics_url": "",
+    "timezone": "America/New_York",
+    "display_city": "Syracuse",
+    "weather": {"latitude": 43.0481, "longitude": -76.1474},
+}
 
 PLACEHOLDER_URLS = {"", "PASTE_ICS_LINK_HERE"}
 
@@ -48,8 +54,9 @@ MAX_LOOKAHEAD_DAYS = 7
 
 
 def load_config() -> dict:
-    path = CONFIG_PATH if CONFIG_PATH.exists() else EXAMPLE_CONFIG_PATH
-    with path.open("r", encoding="utf-8") as f:
+    if not CONFIG_PATH.exists():
+        return dict(DEFAULT_CONFIG)
+    with CONFIG_PATH.open("r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -355,7 +362,7 @@ def today_events(config: dict) -> dict:
         return {
             "status": "sample mode",
             "configured": False,
-            "message": "Paste your Outlook ICS link into config.json.",
+            "message": "Connect your Outlook calendar to replace this sample data.",
             "events": sample_events(zone),
         }
 
