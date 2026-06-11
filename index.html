@@ -45,7 +45,7 @@
       position: relative;
       min-height: 100vh;
       display: grid;
-      grid-template-columns: minmax(2rem, 1fr) minmax(24rem, 40rem) minmax(19rem, 24rem) minmax(1.5rem, 0.6fr);
+      grid-template-columns: minmax(2rem, 1fr) minmax(24rem, 38rem) minmax(19rem, 23rem) minmax(3rem, 1fr);
       align-items: center;
       gap: clamp(1.5rem, 3.5vw, 3.5rem);
       padding: clamp(1rem, 3vw, 3rem);
@@ -102,17 +102,8 @@
       margin-bottom: 0.75rem;
     }
 
-    .eyebrow {
-      color: var(--muted);
-      font-size: 0.78rem;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      font-weight: 700;
-    }
-
     .date {
-      margin-top: 0.18rem;
-      font-size: 1.35rem;
+      font-size: 1.45rem;
       font-weight: 720;
       letter-spacing: -0.03em;
     }
@@ -124,6 +115,8 @@
       overflow: auto;
       padding-right: 0.15rem;
       scrollbar-width: none;
+      -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6rem), transparent);
+      mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6rem), transparent);
     }
 
     .events::-webkit-scrollbar { display: none; }
@@ -157,19 +150,12 @@
     .event.featured .event-time { color: rgba(255, 255, 255, 0.86); }
     .event.featured .event-dot { background: #fff; }
 
-    /* "Now" / "Next" label that gives the hero an explicit meaning */
+    /* "Now" / "Next" / countdown label giving the hero an explicit meaning */
     .event-status {
-      display: inline-block;
-      margin-bottom: 0.45rem;
-      padding: 0.12rem 0.5rem;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.18);
-      border: 1px solid rgba(255, 255, 255, 0.24);
-      color: #fff;
-      font-size: 0.62rem;
-      font-weight: 800;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
+      margin-bottom: 0.3rem;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 0.82rem;
+      font-weight: 600;
     }
 
     .event-time {
@@ -341,10 +327,7 @@
 
     <aside class="agenda-card" aria-label="Today's Outlook calendar">
       <div class="card-header">
-        <div>
-          <div class="eyebrow">Outlook</div>
-          <div class="date" id="date">Today</div>
-        </div>
+        <div class="date" id="date">Today</div>
       </div>
       <div class="events" id="events"></div>
       <div class="updated" id="updated"></div>
