@@ -200,6 +200,13 @@
       line-height: 1.3;
     }
 
+    .more-note {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding-top: 0.3rem;
+    }
+
     .empty {
       border-top: 1px solid var(--faint);
       padding: 1.25rem 0 0.2rem;
@@ -717,16 +724,33 @@
       trimOverflow();
     }
 
-    // Hide events that don't fully fit rather than showing a cut-off sliver.
-    // The list is chronological, so from the first overflowing item onward
-    // everything is hidden; a day header left dangling at the bottom goes too.
+    // Hide events that don't fully fit rather than showing a cut-off sliver,
+    // and append a "+N more" note for what got hidden. The list is
+    // chronological, so from the first overflowing item onward everything is
+    // hidden; a day header left dangling at the cutoff goes too. The cutoff
+    // walks upward until the note itself fits.
     function trimOverflow() {
       const limit = els.events.getBoundingClientRect().bottom;
       const children = [...els.events.children];
       let cut = children.findIndex(c => c.getBoundingClientRect().bottom > limit + 1);
       if (cut === -1) return;
-      if (cut > 0 && children[cut - 1].classList.contains("day-header")) cut -= 1;
-      children.slice(cut).forEach(c => { c.style.display = "none"; });
+
+      const note = document.createElement("div");
+      note.className = "more-note";
+      els.events.appendChild(note);
+
+      while (cut > 0) {
+        if (children[cut - 1].classList.contains("day-header")) {
+          cut -= 1;
+          continue;
+        }
+        children.forEach((c, i) => { c.style.display = i >= cut ? "none" : ""; });
+        const hidden = children.slice(cut).filter(c => c.classList.contains("event")).length;
+        note.textContent = `+${hidden} more`;
+        if (note.getBoundingClientRect().bottom <= limit + 1) return;
+        cut -= 1;
+      }
+      note.remove();
     }
 
     function renderMessage(message) {
