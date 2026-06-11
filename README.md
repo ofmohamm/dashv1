@@ -1,7 +1,6 @@
 # Dash v1
 
-A smart display that shows the time, weather, and
-upcoming Outlook calendar events. Runs as a small local web page, fully on device.
+A privacy-first desktop dashboard for a secondary display, showing time, weather, and upcoming Outlook calendar events from a local web server.
 
 ### Features
 
