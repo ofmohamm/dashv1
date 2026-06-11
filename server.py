@@ -347,11 +347,18 @@ def today_events(config: dict) -> dict:
 
     raw_ics = fetch_ics(ics_url)
     parsed_events = parse_ics(raw_ics)
-    base_day = datetime.now(zone).date()
+    now = datetime.now(zone)
+    base_day = now.date()
 
+    def upcoming_count(items: list[dict]) -> int:
+        return sum(1 for e in items if datetime.fromisoformat(e["end"]) > now)
+
+    # Fill the agenda until there are enough *upcoming* events to show. Counting
+    # upcoming (not total) means a day full of finished meetings still rolls the
+    # view forward into tomorrow, matching the "hide past events" behavior.
     events = events_for_day(parsed_events, base_day, zone)
     offset = 1
-    while len(events) < MIN_AGENDA_EVENTS and offset <= MAX_LOOKAHEAD_DAYS:
+    while upcoming_count(events) < MIN_AGENDA_EVENTS and offset <= MAX_LOOKAHEAD_DAYS:
         events.extend(events_for_day(parsed_events, base_day + timedelta(days=offset), zone))
         offset += 1
 

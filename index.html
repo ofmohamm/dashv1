@@ -238,6 +238,22 @@
       line-height: 1.45;
     }
 
+    .empty-note {
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding: 0.1rem 0 0.55rem;
+    }
+
+    .updated {
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.02em;
+      margin-top: 0.9rem;
+      opacity: 0.85;
+    }
+
+    .updated:empty { display: none; }
+
     .empty strong {
       color: var(--text);
       font-weight: 700;
@@ -331,6 +347,7 @@
         </div>
       </div>
       <div class="events" id="events"></div>
+      <div class="updated" id="updated"></div>
     </aside>
   </main>
 
@@ -349,6 +366,7 @@
       temp: document.getElementById("temp"),
       city: document.getElementById("city"),
       events: document.getElementById("events"),
+      updated: document.getElementById("updated"),
       refreshBtn: document.getElementById("refreshBtn"),
       fullscreenBtn: document.getElementById("fullscreenBtn")
     };
@@ -399,15 +417,32 @@
       return date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
     }
 
+    function localDateStr(date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    }
+
+    // Deterministic hero label: All day / Now / a live countdown today / Next.
+    function statusLabel(event) {
+      if (event.isAllDay) return "All day";
+      const now = Date.now();
+      const start = new Date(event.start).getTime();
+      const end = new Date(event.end).getTime();
+      if (start <= now && end > now) return "Now";
+
+      const minutes = Math.round((start - now) / 60000);
+      if (event.date === localDateStr(new Date()) && minutes > 0) {
+        if (minutes < 60) return `Starts in ${minutes} min`;
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return m ? `Starts in ${h}h ${m}m` : `Starts in ${h}h`;
+      }
+      return "Next";
+    }
+
     function renderEventHtml(event, featured) {
       const loc = event.location ? `<div class="event-location">${escapeHtml(event.location)}</div>` : "";
       const chevron = event.meetingUrl ? `<span class="event-chevron" aria-hidden="true">›</span>` : "";
-      let status = "";
-      if (featured) {
-        const now = Date.now();
-        const live = new Date(event.start).getTime() <= now && new Date(event.end).getTime() > now;
-        status = `<div class="event-status">${live ? "Now" : "Next"}</div>`;
-      }
+      const status = featured ? `<div class="event-status">${escapeHtml(statusLabel(event))}</div>` : "";
       const body = `
         ${status}
         <div class="event-title-row">
@@ -426,21 +461,27 @@
       return `<div class="${cls}">${body}</div>`;
     }
 
-    function renderEvents(events) {
-      if (!events.length) {
-        renderMessage("No events today.");
+    function renderAgenda(allEvents) {
+      // Hide events that have already ended; the agenda is about what's ahead.
+      const now = Date.now();
+      const upcoming = allEvents.filter(e => new Date(e.end).getTime() > now);
+
+      if (!upcoming.length) {
+        renderMessage("No upcoming events.");
         return;
       }
 
-      // Highlight the current/next event as a hero block, like Apple's widget.
-      const now = Date.now();
-      const featuredIdx = events.findIndex(e => !e.isAllDay && new Date(e.end).getTime() >= now);
-
-      // Apple-style fill: when today is sparse the server appends upcoming days,
-      // so insert a divider whenever the day changes. Today's group stays unlabeled.
-      let lastDate = null;
+      const todayStr = localDateStr(new Date());
+      const hero = upcoming[0];
       const parts = [];
-      events.forEach((event, i) => {
+
+      // When today is finished, say so before rolling into the next day's events.
+      if (!upcoming.some(e => e.date === todayStr)) {
+        parts.push(`<div class="empty-note">No more events today.</div>`);
+      }
+
+      let lastDate = null;
+      for (const event of upcoming) {
         if (event.date && event.date !== lastDate) {
           lastDate = event.date;
           const label = dayLabel(event.date);
@@ -448,8 +489,8 @@
             parts.push(`<div class="day-header">${escapeHtml(label)}</div>`);
           }
         }
-        parts.push(renderEventHtml(event, i === featuredIdx));
-      });
+        parts.push(renderEventHtml(event, event === hero));
+      }
       els.events.innerHTML = parts.join("");
     }
 
@@ -457,18 +498,45 @@
       els.events.innerHTML = `<div class="empty">${message}</div>`;
     }
 
+    // Cache the last good payload so a failed refresh keeps the screen useful.
+    const state = { events: [], setupMessage: null, lastUpdated: null, stale: false };
+
+    function renderUpdatedNote() {
+      if (state.stale && state.lastUpdated) {
+        const mins = Math.max(0, Math.round((Date.now() - state.lastUpdated) / 60000));
+        els.updated.textContent = mins < 1 ? "Offline · updated just now" : `Offline · updated ${mins}m ago`;
+      } else {
+        els.updated.textContent = "";
+      }
+    }
+
+    function render() {
+      if (state.setupMessage) {
+        renderMessage(`<strong>ICS setup needed.</strong><br>${escapeHtml(state.setupMessage)}<br><br>Edit <code>config.json</code>, then refresh.`);
+      } else {
+        renderAgenda(state.events);
+      }
+      renderUpdatedNote();
+    }
+
     async function refreshCalendar() {
       try {
         const res = await fetch("/api/events", { cache: "no-store" });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Calendar failed to load.");
-        if (data.message && !data.configured) {
-          renderMessage(`<strong>ICS setup needed.</strong><br>${escapeHtml(data.message)}<br><br>Edit <code>config.json</code>, then refresh.`);
-          return;
-        }
-        renderEvents(data.events || []);
+        state.setupMessage = data.message && !data.configured ? data.message : null;
+        state.events = data.events || [];
+        state.lastUpdated = Date.now();
+        state.stale = false;
+        render();
       } catch (error) {
-        renderMessage(`<strong>Calendar failed to load.</strong><br>${escapeHtml(error.message || String(error))}`);
+        // Graceful offline: keep the last known agenda instead of blanking out.
+        if (state.lastUpdated) {
+          state.stale = true;
+          render();
+        } else {
+          renderMessage(`<strong>Calendar failed to load.</strong><br>${escapeHtml(error.message || String(error))}`);
+        }
       }
     }
 
@@ -511,6 +579,9 @@
     setInterval(updateClock, 1000);
     setInterval(updateWeather, 15 * 60 * 1000);
     setInterval(refreshCalendar, 5 * 60 * 1000);
+    // Re-render from cached data between fetches so the hero countdown ticks,
+    // finished events fall away, and the offline note ages in real time.
+    setInterval(() => { if (state.lastUpdated) render(); }, 30 * 1000);
   </script>
 </body>
 </html>
