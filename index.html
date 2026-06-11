@@ -116,13 +116,6 @@
       letter-spacing: -0.03em;
     }
 
-    .status {
-      color: var(--muted);
-      font-size: 0.82rem;
-      white-space: nowrap;
-      padding-top: 0.15rem;
-    }
-
     .events {
       display: grid;
       gap: 0.7rem;
@@ -135,10 +128,7 @@
     .events::-webkit-scrollbar { display: none; }
 
     .event {
-      display: grid;
-      grid-template-columns: 4.45rem 1fr;
-      gap: 0.85rem;
-      align-items: start;
+      display: block;
       padding: 0.82rem 0;
       border-top: 1px solid var(--faint);
       color: inherit;
@@ -146,7 +136,7 @@
       border-radius: 0.7rem;
     }
 
-    .event:first-child { border-top: 0; }
+    .events > :first-child { border-top: 0; }
 
     .event.has-link { cursor: pointer; }
 
@@ -154,11 +144,23 @@
 
     .event-time {
       color: var(--muted);
-      font-size: 0.88rem;
-      line-height: 1.35;
+      font-size: 0.82rem;
+      line-height: 1.3;
       font-variant-numeric: tabular-nums;
-      white-space: pre-line;
+      margin-bottom: 0.22rem;
     }
+
+    .day-header {
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 700;
+      padding: 1rem 0 0.15rem;
+      border-top: 1px solid var(--faint);
+    }
+
+    .day-header + .event { border-top: 0; }
 
     .event-title-row {
       display: flex;
@@ -283,7 +285,6 @@
           <div class="eyebrow">Outlook</div>
           <div class="date" id="date">Today</div>
         </div>
-        <div class="status" id="calendarStatus">loading</div>
       </div>
       <div class="events" id="events"></div>
     </aside>
@@ -304,7 +305,6 @@
       temp: document.getElementById("temp"),
       city: document.getElementById("city"),
       events: document.getElementById("events"),
-      calendarStatus: document.getElementById("calendarStatus"),
       refreshBtn: document.getElementById("refreshBtn"),
       fullscreenBtn: document.getElementById("fullscreenBtn")
     };
@@ -341,7 +341,36 @@
       const end = new Date(event.end);
       const opts = { hour: "numeric", minute: "2-digit", hour12: true };
       const clean = date => date.toLocaleTimeString("en-US", opts).replace(/\s?(AM|PM)$/i, "");
-      return `${clean(start)}\n${clean(end)}`;
+      return `${clean(start)} – ${clean(end)}`;
+    }
+
+    function dayLabel(dateStr) {
+      const [y, m, d] = dateStr.split("-").map(Number);
+      const date = new Date(y, m - 1, d);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diff = Math.round((date - today) / 86400000);
+      if (diff === 0) return "Today";
+      if (diff === 1) return "Tomorrow";
+      return date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+    }
+
+    function renderEventHtml(event) {
+      const loc = event.location ? `<div class="event-location">${escapeHtml(event.location)}</div>` : "";
+      const join = event.meetingUrl ? `<span class="join-chip">open</span>` : "";
+      const body = `
+        <div class="event-time">${formatEventTime(event)}</div>
+        <div class="event-title-row">
+          <div class="event-title">${escapeHtml(event.subject || "Untitled")}</div>
+          ${join}
+        </div>
+        ${loc}
+      `;
+
+      if (event.meetingUrl) {
+        return `<a class="event has-link" href="${escapeAttr(event.meetingUrl)}" target="_blank" rel="noopener noreferrer">${body}</a>`;
+      }
+      return `<div class="event">${body}</div>`;
     }
 
     function renderEvents(events) {
@@ -350,25 +379,21 @@
         return;
       }
 
-      els.events.innerHTML = events.map(event => {
-        const loc = event.location ? `<div class="event-location">${escapeHtml(event.location)}</div>` : "";
-        const join = event.meetingUrl ? `<span class="join-chip">open</span>` : "";
-        const body = `
-          <div class="event-time">${formatEventTime(event)}</div>
-          <div>
-            <div class="event-title-row">
-              <div class="event-title">${escapeHtml(event.subject || "Untitled")}</div>
-              ${join}
-            </div>
-            ${loc}
-          </div>
-        `;
-
-        if (event.meetingUrl) {
-          return `<a class="event has-link" href="${escapeAttr(event.meetingUrl)}" target="_blank" rel="noopener noreferrer">${body}</a>`;
+      // Apple-style fill: when today is sparse the server appends upcoming days,
+      // so insert a divider whenever the day changes. Today's group stays unlabeled.
+      let lastDate = null;
+      const parts = [];
+      for (const event of events) {
+        if (event.date && event.date !== lastDate) {
+          lastDate = event.date;
+          const label = dayLabel(event.date);
+          if (label !== "Today") {
+            parts.push(`<div class="day-header">${escapeHtml(label)}</div>`);
+          }
         }
-        return `<div class="event">${body}</div>`;
-      }).join("");
+        parts.push(renderEventHtml(event));
+      }
+      els.events.innerHTML = parts.join("");
     }
 
     function renderMessage(message) {
@@ -376,11 +401,9 @@
     }
 
     async function refreshCalendar() {
-      els.calendarStatus.textContent = "loading";
       try {
         const res = await fetch("/api/events", { cache: "no-store" });
         const data = await res.json();
-        els.calendarStatus.textContent = data.status || (res.ok ? "live" : "error");
         if (!res.ok) throw new Error(data.message || "Calendar failed to load.");
         if (data.message && !data.configured) {
           renderMessage(`<strong>ICS setup needed.</strong><br>${escapeHtml(data.message)}<br><br>Edit <code>config.json</code>, then refresh.`);
@@ -388,7 +411,6 @@
         }
         renderEvents(data.events || []);
       } catch (error) {
-        els.calendarStatus.textContent = "error";
         renderMessage(`<strong>Calendar failed to load.</strong><br>${escapeHtml(error.message || String(error))}`);
       }
     }
