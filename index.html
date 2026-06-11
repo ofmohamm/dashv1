@@ -102,7 +102,9 @@
       gap: 0.7rem;
       max-height: 27rem;
       overflow: hidden;
-      padding-right: 0.15rem;
+      /* Widen the clip box so the hero's negative margins aren't cut off. */
+      margin: 0 -1rem;
+      padding: 0 1rem;
     }
 
     .event {
@@ -120,11 +122,13 @@
 
     .event.has-link:hover .event-title { text-decoration: underline; }
 
-    /* "Next up" hero, inspired by Apple's highlighted event block */
+    /* "Next up" hero, inspired by Apple's highlighted event block.
+       Negative side margins offset the inner padding so the hero's text
+       stays column-aligned with the plain events below it. */
     .event.featured {
       border-top: 0;
       padding: 0.92rem 1rem;
-      margin-bottom: 0.1rem;
+      margin: 0 -1rem 0.1rem;
       border-radius: 1rem;
       border: 1px solid rgba(255, 255, 255, 0.16);
       background: linear-gradient(135deg, rgba(108, 124, 240, 0.6), rgba(140, 110, 235, 0.34));
