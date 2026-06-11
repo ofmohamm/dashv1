@@ -102,7 +102,7 @@
       gap: 0.7rem;
       max-height: 27rem;
       overflow: hidden;
-      /* Widen the clip box so the hero's negative margins aren't cut off. */
+      /* Widen the clip box so the hero's gutter rail isn't cut off. */
       margin: 0 -1rem;
       padding: 0 1rem;
     }
@@ -122,27 +122,30 @@
 
     .event.has-link:hover .event-title { text-decoration: underline; }
 
-    /* "Next up" hero, inspired by Apple's highlighted event block.
-       Negative side margins offset the inner padding so the hero's text
-       stays column-aligned with the plain events below it. */
-    .event.featured {
-      border-top: 0;
-      padding: 0.92rem 1rem;
-      margin: 0 -1rem 0.1rem;
-      border-radius: 1rem;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      background: linear-gradient(135deg, rgba(108, 124, 240, 0.6), rgba(140, 110, 235, 0.34));
+    /* Direction-1 hero: no fill. The next event keeps the row geometry and is
+       marked by an accent rail in the left gutter, a brighter title, and the
+       countdown line — the list stays one uniform column. */
+    .event { position: relative; }
+
+    .event.featured::before {
+      content: "";
+      position: absolute;
+      left: -0.85rem;
+      top: 0.95rem;
+      bottom: 0.95rem;
+      width: 3px;
+      border-radius: 999px;
+      background: var(--accent);
     }
 
-    .event.featured .event-time { color: rgba(255, 255, 255, 0.86); }
-    .event.featured .event-dot { background: #fff; }
+    .event.featured .event-title { color: #fff; }
 
     /* "Now" / "Next" / countdown label giving the hero an explicit meaning */
     .event-status {
-      margin-bottom: 0.3rem;
-      color: rgba(255, 255, 255, 0.82);
-      font-size: 0.82rem;
-      font-weight: 600;
+      margin-bottom: 0.2rem;
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 650;
     }
 
     .event-time {
@@ -169,8 +172,6 @@
       line-height: 1;
       font-weight: 400;
     }
-
-    .event.featured .event-chevron { color: rgba(255, 255, 255, 0.82); }
 
     .day-header {
       color: var(--muted);
