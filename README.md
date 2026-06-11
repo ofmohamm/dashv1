@@ -26,6 +26,26 @@ A simple full-screen wall/desk display that shows the time, local weather, and y
 
 Press `F11` (or the fullscreen button, top-right) for a clean display.
 
+## Run it in the background (Windows)
+
+So the dashboard keeps running after you close the terminal and starts itself
+when you log in:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-windows.ps1
+```
+
+This registers a Scheduled Task that runs the server windowlessly with
+`pythonw`, restarts it if it ever stops, and launches it at every log on. Then
+just open `http://127.0.0.1:5173/` (tip: make a browser shortcut to that URL,
+or open it with `--kiosk` for a dedicated display).
+
+To remove it:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\uninstall-windows.ps1
+```
+
 ## Notes
 
 - Settings are saved to `config.json` in this folder. Your calendar link is
