@@ -1,9 +1,0 @@
-{
-  "ics_url": "PASTE_ICS_LINK_HERE",
-  "timezone": "America/New_York",
-  "display_city": "Syracuse",
-  "weather": {
-    "latitude": 43.0481,
-    "longitude": -76.1474
-  }
-}

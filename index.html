@@ -9,10 +9,12 @@
       --text: rgba(255, 255, 255, 0.94);
       --muted: rgba(255, 255, 255, 0.68);
       --faint: rgba(255, 255, 255, 0.18);
-      --card: rgba(12, 22, 34, 0.42);
-      --card-border: rgba(255, 255, 255, 0.12);
-      --shadow: rgba(0, 0, 0, 0.28);
+      --card: rgba(10, 12, 16, 0.5);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --shadow: rgba(0, 0, 0, 0.5);
       --accent: #8aa0ff;
+      /* First-paint background; must match BACKGROUND_PRESETS[0] in the JS. */
+      --bg-image: url("https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=2400&q=85");
     }
 
     * { box-sizing: border-box; }
@@ -24,28 +26,16 @@
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       overflow: hidden;
       background:
-        linear-gradient(180deg, rgba(177, 190, 201, 0.25), rgba(10, 20, 32, 0.72)),
-        linear-gradient(90deg, rgba(9, 16, 26, 0.25), rgba(9, 16, 26, 0.1)),
-        url("https://images.unsplash.com/photo-1473773508845-188df298d2d1?auto=format&fit=crop&w=2400&q=85");
-      background-size: cover;
-      background-position: center;
-    }
-
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.07), transparent 23rem),
-        linear-gradient(180deg, rgba(2, 8, 16, 0.05), rgba(2, 8, 16, 0.62));
-      pointer-events: none;
+        linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.45)),
+        var(--bg-image) center / cover no-repeat,
+        #000;
     }
 
     .dashboard {
       position: relative;
       min-height: 100vh;
       display: grid;
-      grid-template-columns: minmax(2rem, 1fr) minmax(24rem, 40rem) minmax(19rem, 24rem) minmax(1.5rem, 0.6fr);
+      grid-template-columns: minmax(2rem, 1fr) minmax(24rem, 38rem) minmax(19rem, 23rem) minmax(3rem, 1fr);
       align-items: center;
       gap: clamp(1.5rem, 3.5vw, 3.5rem);
       padding: clamp(1rem, 3vw, 3rem);
@@ -102,35 +92,25 @@
       margin-bottom: 0.75rem;
     }
 
-    .eyebrow {
-      color: var(--muted);
-      font-size: 0.78rem;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      font-weight: 700;
-    }
-
     .date {
-      margin-top: 0.18rem;
-      font-size: 1.35rem;
+      font-size: 1.55rem;
       font-weight: 720;
       letter-spacing: -0.03em;
     }
 
     .events {
       display: grid;
-      gap: 0.7rem;
+      gap: 0.78rem;
       max-height: 27rem;
-      overflow: auto;
-      padding-right: 0.15rem;
-      scrollbar-width: none;
+      overflow: hidden;
+      /* Widen the clip box so the hero's gutter rail isn't cut off. */
+      margin: 0 -1rem;
+      padding: 0 1rem;
     }
-
-    .events::-webkit-scrollbar { display: none; }
 
     .event {
       display: block;
-      padding: 0.82rem 0;
+      padding: 0.9rem 0;
       border-top: 1px solid var(--faint);
       color: inherit;
       text-decoration: none;
@@ -143,47 +123,44 @@
 
     .event.has-link:hover .event-title { text-decoration: underline; }
 
-    /* "Next up" hero, inspired by Apple's highlighted event block */
-    .event.featured {
-      border-top: 0;
-      padding: 0.92rem 1rem;
-      margin-bottom: 0.1rem;
-      border-radius: 1rem;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      background: linear-gradient(135deg, rgba(108, 124, 240, 0.6), rgba(140, 110, 235, 0.34));
-      box-shadow: 0 0.7rem 1.8rem rgba(0, 0, 0, 0.28);
+    /* Direction-1 hero: no fill. The next event keeps the row geometry and is
+       marked by an accent rail in the left gutter, a brighter title, and the
+       countdown line — the list stays one uniform column. */
+    .event { position: relative; }
+
+    .event.featured::before {
+      content: "";
+      position: absolute;
+      left: -0.85rem;
+      top: 0.95rem;
+      bottom: 0.95rem;
+      width: 3px;
+      border-radius: 999px;
+      background: var(--accent);
     }
 
-    .event.featured .event-time { color: rgba(255, 255, 255, 0.86); }
-    .event.featured .event-dot { background: #fff; }
+    .event.featured .event-title { color: #fff; }
 
-    /* "Now" / "Next" label that gives the hero an explicit meaning */
+    /* "Now" / "Next" / countdown label giving the hero an explicit meaning */
     .event-status {
-      display: inline-block;
-      margin-bottom: 0.45rem;
-      padding: 0.12rem 0.5rem;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.18);
-      border: 1px solid rgba(255, 255, 255, 0.24);
-      color: #fff;
-      font-size: 0.62rem;
-      font-weight: 800;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
+      margin-bottom: 0.2rem;
+      color: var(--accent);
+      font-size: 0.86rem;
+      font-weight: 650;
     }
 
     .event-time {
       color: var(--muted);
-      font-size: 0.82rem;
+      font-size: 0.92rem;
       line-height: 1.3;
       font-variant-numeric: tabular-nums;
-      margin-top: 0.2rem;
+      margin-top: 0.22rem;
     }
 
     .event-dot {
       flex: none;
-      width: 0.52rem;
-      height: 0.52rem;
+      width: 0.58rem;
+      height: 0.58rem;
       border-radius: 50%;
       background: var(--accent);
       transform: translateY(-0.05rem);
@@ -192,16 +169,14 @@
     .event-chevron {
       margin-left: auto;
       color: var(--muted);
-      font-size: 1.15rem;
+      font-size: 1.28rem;
       line-height: 1;
       font-weight: 400;
     }
 
-    .event.featured .event-chevron { color: rgba(255, 255, 255, 0.82); }
-
     .day-header {
       color: var(--muted);
-      font-size: 0.72rem;
+      font-size: 0.78rem;
       letter-spacing: 0.14em;
       text-transform: uppercase;
       font-weight: 700;
@@ -214,21 +189,28 @@
     .event-title-row {
       display: flex;
       align-items: baseline;
-      gap: 0.5rem;
+      gap: 0.55rem;
     }
 
     .event-title {
-      font-size: 1rem;
+      font-size: 1.12rem;
       font-weight: 670;
       letter-spacing: -0.02em;
-      line-height: 1.22;
+      line-height: 1.25;
     }
 
     .event-location {
-      margin-top: 0.25rem;
+      margin-top: 0.28rem;
       color: var(--muted);
-      font-size: 0.82rem;
+      font-size: 0.92rem;
       line-height: 1.3;
+    }
+
+    .more-note {
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 600;
+      padding-top: 0.3rem;
     }
 
     .empty {
@@ -271,46 +253,210 @@
       right: 1rem;
       display: flex;
       gap: 0.5rem;
-      padding: 0.3rem;
-      border-radius: 999px;
-      background: rgba(10, 20, 32, 0.32);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      backdrop-filter: blur(18px) saturate(120%);
-      opacity: 0.62;
+      opacity: 0.55;
       transition: opacity 180ms ease;
     }
 
     .controls:hover { opacity: 1; }
 
-    button {
+    .icon-btn {
+      display: grid;
+      place-items: center;
+      width: 2.35rem;
+      height: 2.35rem;
       color: var(--text);
-      background: rgba(255, 255, 255, 0.08);
+      background: rgba(12, 12, 14, 0.4);
       border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 999px;
-      padding: 0.5rem 0.95rem;
+      backdrop-filter: blur(14px);
       font: inherit;
-      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .icon-btn:hover { background: rgba(255, 255, 255, 0.18); }
+
+    .icon-btn svg {
+      width: 1.05rem;
+      height: 1.05rem;
+    }
+
+    .hide-ui .controls {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Settings panel */
+    .settings-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(6px);
+      z-index: 10;
+    }
+
+    .settings-backdrop.open { display: grid; }
+
+    .settings {
+      width: min(92vw, 26rem);
+      max-height: 88vh;
+      overflow: auto;
+      padding: 1.5rem;
+      border-radius: 1.4rem;
+      border: 1px solid var(--card-border);
+      background: rgba(12, 14, 18, 0.92);
+      box-shadow: 0 2rem 7rem rgba(0, 0, 0, 0.6);
+      scrollbar-width: none;
+    }
+
+    .settings::-webkit-scrollbar { display: none; }
+
+    .settings h2 {
+      margin: 0 0 1.1rem;
+      font-size: 1.2rem;
+      letter-spacing: -0.02em;
+    }
+
+    .settings label {
+      display: block;
+      margin: 0.9rem 0 0.35rem;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .settings input[type="text"] {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border-radius: 0.7rem;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.85rem;
+    }
+
+    .settings input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .bg-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+
+    .bg-option {
+      position: relative;
+      aspect-ratio: 16 / 10;
+      border-radius: 0.6rem;
+      border: 2px solid transparent;
+      background-size: cover;
+      background-position: center;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .bg-option.selected { border-color: var(--accent); }
+
+    .settings-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.6rem;
+      margin-top: 1.4rem;
+    }
+
+    .settings-actions button {
+      padding: 0.55rem 1.1rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.85rem;
       font-weight: 600;
       cursor: pointer;
     }
 
-    button:hover { background: rgba(255, 255, 255, 0.18); }
+    .settings-actions button:hover { background: rgba(255, 255, 255, 0.16); }
 
-    .hint {
-      position: fixed;
-      left: 50%;
-      bottom: 1.4rem;
-      transform: translateX(-50%);
-      color: rgba(255, 255, 255, 0.72);
-      font-size: 0.76rem;
-      letter-spacing: 0.01em;
-      text-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.55);
+    .settings-actions .primary {
+      background: var(--accent);
+      border-color: transparent;
+      color: #0b1020;
     }
 
-    .hide-ui .controls,
-    .hide-ui .hint {
-      opacity: 0;
-      pointer-events: none;
+    .settings-actions .primary:hover { background: #a3b4ff; }
+
+    .wizard {
+      display: grid;
+      gap: 0.7rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .wizard strong { color: var(--text); }
+
+    .wizard-step {
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      flex: none;
+      display: grid;
+      place-items: center;
+      width: 1.3rem;
+      height: 1.3rem;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: var(--text);
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+
+    .wizard-links {
+      display: flex;
+      gap: 0.45rem;
+      margin-top: 0.4rem;
+    }
+
+    .chip-link {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+      padding: 0.28rem 0.7rem;
+      font-size: 0.76rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .chip-link:hover { background: rgba(255, 255, 255, 0.18); }
+
+    .wizard-paste { flex: 1; }
+
+    .wizard-paste input { margin-top: 0.4rem; }
+
+    .ics-status {
+      margin-top: 0.4rem;
+      font-size: 0.78rem;
+      min-height: 1em;
+    }
+
+    .ics-status.ok { color: #9ee6a8; }
+    .ics-status.bad { color: #ff9c9c; }
+
+    .settings-error {
+      color: #ff9c9c;
+      font-size: 0.8rem;
+      margin-top: 0.8rem;
+      min-height: 1em;
     }
 
     @media (max-width: 980px) {
@@ -341,10 +487,7 @@
 
     <aside class="agenda-card" aria-label="Today's Outlook calendar">
       <div class="card-header">
-        <div>
-          <div class="eyebrow">Outlook</div>
-          <div class="date" id="date">Today</div>
-        </div>
+        <div class="date" id="date">Today</div>
       </div>
       <div class="events" id="events"></div>
       <div class="updated" id="updated"></div>
@@ -352,13 +495,72 @@
   </main>
 
   <div class="controls">
-    <button id="refreshBtn" type="button">Refresh</button>
-    <button id="fullscreenBtn" type="button">Fullscreen</button>
+    <button class="icon-btn" id="editBtn" type="button" title="Edit settings" aria-label="Edit settings">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M16.9 3.9a2.1 2.1 0 0 1 3 3L8.5 18.3 4 19.8l1.5-4.5L16.9 3.9Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <button class="icon-btn" id="fullscreenBtn" type="button" title="Toggle fullscreen" aria-label="Toggle fullscreen">
+      <svg id="expandIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <svg id="collapseIcon" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="display:none">
+        <path d="M4 9h5V4M20 9h-5V4M4 15h5v5M20 15h-5v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
   </div>
-  <div class="hint">Click an event to join · F11 for fullscreen</div>
+
+  <div class="settings-backdrop" id="settingsBackdrop">
+    <div class="settings" role="dialog" aria-label="Dashboard settings">
+      <h2>Settings</h2>
+      <label>Connect your Outlook calendar</label>
+      <div class="wizard">
+        <div class="wizard-step">
+          <span class="step-num">1</span>
+          <div>
+            Open Outlook's calendar publishing page:
+            <div class="wizard-links">
+              <a class="chip-link" href="https://outlook.office.com/calendar/options/calendar/SharedCalendars" target="_blank" rel="noopener noreferrer">Work account</a>
+              <a class="chip-link" href="https://outlook.live.com/calendar/options/calendar/shared" target="_blank" rel="noopener noreferrer">Personal account</a>
+            </div>
+          </div>
+        </div>
+        <div class="wizard-step">
+          <span class="step-num">2</span>
+          <div>Under <strong>Publish a calendar</strong>, pick your calendar, choose <strong>Can view all details</strong>, click <strong>Publish</strong>, then copy the <strong>ICS</strong> link.</div>
+        </div>
+        <div class="wizard-step">
+          <span class="step-num">3</span>
+          <div class="wizard-paste">
+            Paste the link here:
+            <input type="text" id="icsInput" placeholder="Paste your calendar link" spellcheck="false" />
+            <div class="ics-status" id="icsStatus"></div>
+          </div>
+        </div>
+      </div>
+      <label for="cityInput">Weather location</label>
+      <input type="text" id="cityInput" placeholder="City name, e.g. Syracuse" />
+      <label>Background</label>
+      <div class="bg-grid" id="bgGrid"></div>
+      <label for="bgInput">Custom background URL (optional)</label>
+      <input type="text" id="bgInput" placeholder="https://images.unsplash.com/…" spellcheck="false" />
+      <div class="settings-error" id="settingsError"></div>
+      <div class="settings-actions">
+        <button type="button" id="cancelBtn">Cancel</button>
+        <button type="button" class="primary" id="saveBtn">Save</button>
+      </div>
+    </div>
+  </div>
 
   <script>
-    const WEATHER = { city: "Syracuse", latitude: 43.0481, longitude: -76.1474 };
+    const BACKGROUND_PRESETS = [
+      { name: "Night sky", url: "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=2400&q=85" },
+      { name: "Forest road", url: "https://images.unsplash.com/photo-1473773508845-188df298d2d1?auto=format&fit=crop&w=2400&q=85" },
+      { name: "Mountain lake", url: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=2400&q=85" },
+      { name: "Foggy forest", url: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=2400&q=85" },
+      { name: "Aurora", url: "https://images.unsplash.com/photo-1483347756197-71ef80e95f73?auto=format&fit=crop&w=2400&q=85" },
+      { name: "Misty peaks", url: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?auto=format&fit=crop&w=2400&q=85" }
+    ];
 
     const els = {
       time: document.getElementById("time"),
@@ -367,9 +569,43 @@
       city: document.getElementById("city"),
       events: document.getElementById("events"),
       updated: document.getElementById("updated"),
-      refreshBtn: document.getElementById("refreshBtn"),
-      fullscreenBtn: document.getElementById("fullscreenBtn")
+      fullscreenBtn: document.getElementById("fullscreenBtn"),
+      expandIcon: document.getElementById("expandIcon"),
+      collapseIcon: document.getElementById("collapseIcon"),
+      editBtn: document.getElementById("editBtn"),
+      settingsBackdrop: document.getElementById("settingsBackdrop"),
+      icsInput: document.getElementById("icsInput"),
+      icsStatus: document.getElementById("icsStatus"),
+      cityInput: document.getElementById("cityInput"),
+      bgGrid: document.getElementById("bgGrid"),
+      bgInput: document.getElementById("bgInput"),
+      settingsError: document.getElementById("settingsError"),
+      saveBtn: document.getElementById("saveBtn"),
+      cancelBtn: document.getElementById("cancelBtn")
     };
+
+    // Loaded from /api/config at boot. These placeholders mirror server.py's
+    // DEFAULT_CONFIG (keep in sync) and only drive the UI if that fetch fails.
+    let config = {
+      ics_url: "",
+      display_city: "Syracuse",
+      weather: { latitude: 43.0481, longitude: -76.1474 },
+      background: ""
+    };
+
+    function applyBackground() {
+      const url = config.background || BACKGROUND_PRESETS[0].url;
+      document.documentElement.style.setProperty("--bg-image", `url("${url.replaceAll('"', "")}")`);
+    }
+
+    async function loadConfig() {
+      try {
+        const res = await fetch("/api/config", { cache: "no-store" });
+        if (res.ok) config = await res.json();
+      } catch { /* keep defaults */ }
+      applyBackground();
+      updateWeather();
+    }
 
     function updateClock() {
       const now = new Date();
@@ -386,9 +622,9 @@
     }
 
     async function updateWeather() {
-      els.city.textContent = WEATHER.city;
+      els.city.textContent = config.display_city;
       try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER.latitude}&longitude=${WEATHER.longitude}&current=temperature_2m&temperature_unit=fahrenheit`;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${config.weather.latitude}&longitude=${config.weather.longitude}&current=temperature_2m&temperature_unit=fahrenheit`;
         const res = await fetch(url);
         const data = await res.json();
         els.temp.textContent = `${Math.round(data.current.temperature_2m)}°`;
@@ -406,19 +642,27 @@
       return `${clean(start)} – ${clean(end)}`;
     }
 
+    function localDateStr(date) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    }
+
+    // "Today" as the server sees it (computed in the configured timezone and
+    // sent with each /api/events payload). Falling back to the browser clock
+    // only before the first payload arrives.
+    function serverToday() {
+      return state.today || localDateStr(new Date());
+    }
+
     function dayLabel(dateStr) {
-      const [y, m, d] = dateStr.split("-").map(Number);
-      const date = new Date(y, m - 1, d);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const diff = Math.round((date - today) / 86400000);
+      const parse = s => {
+        const [y, m, d] = s.split("-").map(Number);
+        return new Date(y, m - 1, d);
+      };
+      const date = parse(dateStr);
+      const diff = Math.round((date - parse(serverToday())) / 86400000);
       if (diff === 0) return "Today";
       if (diff === 1) return "Tomorrow";
       return date.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
-    }
-
-    function localDateStr(date) {
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     }
 
     // Deterministic hero label: All day / Now / a live countdown today / Next.
@@ -430,7 +674,7 @@
       if (start <= now && end > now) return "Now";
 
       const minutes = Math.round((start - now) / 60000);
-      if (event.date === localDateStr(new Date()) && minutes > 0) {
+      if (event.date === serverToday() && minutes > 0) {
         if (minutes < 60) return `Starts in ${minutes} min`;
         const h = Math.floor(minutes / 60);
         const m = minutes % 60;
@@ -471,7 +715,7 @@
         return;
       }
 
-      const todayStr = localDateStr(new Date());
+      const todayStr = serverToday();
       const hero = upcoming[0];
       const parts = [];
 
@@ -492,6 +736,34 @@
         parts.push(renderEventHtml(event, event === hero));
       }
       els.events.innerHTML = parts.join("");
+      trimOverflow();
+    }
+
+    // Hide events that don't fully fit rather than showing a cut-off sliver,
+    // and append a "+N more" note for what got hidden. The list is
+    // chronological, so from the first overflowing item onward everything is
+    // hidden; a day header left dangling at the cutoff goes too. The cutoff
+    // walks upward until the note itself fits.
+    function trimOverflow() {
+      const limit = els.events.getBoundingClientRect().bottom;
+      const children = [...els.events.children];
+      let cut = children.findIndex(c => c.getBoundingClientRect().bottom > limit + 1);
+      if (cut === -1) return;
+
+      const note = document.createElement("div");
+      note.className = "more-note";
+      els.events.appendChild(note);
+
+      // Walk the cutoff upward until the note fits. cut === 0 (hide
+      // everything, show only the note) is a valid last resort — exiting
+      // without hiding anything would bring back the cut-off sliver.
+      for (; cut >= 0; cut -= 1) {
+        if (cut > 0 && children[cut - 1].classList.contains("day-header")) continue;
+        children.forEach((c, i) => { c.style.display = i >= cut ? "none" : ""; });
+        const hidden = children.slice(cut).filter(c => c.classList.contains("event")).length;
+        note.textContent = `+${hidden} more`;
+        if (cut === 0 || note.getBoundingClientRect().bottom <= limit + 1) return;
+      }
     }
 
     function renderMessage(message) {
@@ -499,7 +771,7 @@
     }
 
     // Cache the last good payload so a failed refresh keeps the screen useful.
-    const state = { events: [], setupMessage: null, lastUpdated: null, stale: false };
+    const state = { events: [], setupMessage: null, lastUpdated: null, stale: false, today: null };
 
     function renderUpdatedNote() {
       if (state.stale && state.lastUpdated) {
@@ -512,7 +784,7 @@
 
     function render() {
       if (state.setupMessage) {
-        renderMessage(`<strong>ICS setup needed.</strong><br>${escapeHtml(state.setupMessage)}<br><br>Edit <code>config.json</code>, then refresh.`);
+        renderMessage(`<strong>No calendar connected.</strong><br>${escapeHtml(state.setupMessage)}<br><br>Click the ✎ button in the top-right to set it up.`);
       } else {
         renderAgenda(state.events);
       }
@@ -526,6 +798,7 @@
         if (!res.ok) throw new Error(data.message || "Calendar failed to load.");
         state.setupMessage = data.message && !data.configured ? data.message : null;
         state.events = data.events || [];
+        state.today = data.today || null;
         state.lastUpdated = Date.now();
         state.stale = false;
         render();
@@ -550,6 +823,155 @@
       }
     }
 
+    // Keep the fullscreen icon honest, even when F11 / Esc bypass our button.
+    function syncFullscreenIcon() {
+      const fs = Boolean(document.fullscreenElement);
+      els.expandIcon.style.display = fs ? "none" : "";
+      els.collapseIcon.style.display = fs ? "" : "none";
+    }
+
+    /* ---------- Settings panel ---------- */
+
+    function setIcsStatus(kind, text) {
+      els.icsStatus.className = "ics-status" + (kind ? ` ${kind}` : "");
+      els.icsStatus.textContent = text;
+    }
+
+    // Check pasted links as the user types, with friendly plain-English results.
+    let validateTimer;
+    let validateSeq = 0;
+    function scheduleIcsValidation() {
+      clearTimeout(validateTimer);
+      const value = els.icsInput.value.trim();
+      if (!value) {
+        setIcsStatus("", "");
+        return;
+      }
+      setIcsStatus("", "Checking…");
+      validateTimer = setTimeout(async () => {
+        const seq = ++validateSeq;
+        try {
+          const res = await fetch("/api/validate-ics", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: value })
+          });
+          const data = await res.json();
+          if (seq !== validateSeq) return; // a newer check superseded this one
+          if (data.ok) {
+            els.icsInput.value = data.url;
+            setIcsStatus("ok", `✓ Found your calendar — ${data.upcoming} event${data.upcoming === 1 ? "" : "s"} in the next 7 days`);
+          } else {
+            setIcsStatus("bad", data.message || "That link didn't work.");
+          }
+        } catch {
+          if (seq === validateSeq) setIcsStatus("bad", "Couldn't check the link. Is the dashboard server running?");
+        }
+      }, 600);
+    }
+
+    function populateSettingsForm() {
+      els.icsInput.value = config.ics_url || "";
+      setIcsStatus(config.ics_url ? "ok" : "", config.ics_url ? "✓ Calendar connected" : "");
+      els.cityInput.value = config.display_city || "";
+      const isPreset = BACKGROUND_PRESETS.some(p => p.url === config.background);
+      els.bgInput.value = !config.background || isPreset ? "" : config.background;
+      buildBgGrid(config.background || BACKGROUND_PRESETS[0].url);
+    }
+
+    // Always populate the form from a fresh server read, and keep Save
+    // disabled until it lands — otherwise opening settings before the boot
+    // config fetch finishes shows an empty ICS field, and saving any other
+    // change would silently erase the stored calendar link.
+    async function openSettings() {
+      els.settingsError.textContent = "";
+      els.saveBtn.disabled = true;
+      els.settingsBackdrop.classList.add("open");
+      try {
+        const res = await fetch("/api/config", { cache: "no-store" });
+        if (!res.ok) throw new Error();
+        config = await res.json();
+        populateSettingsForm();
+        els.saveBtn.disabled = false;
+      } catch {
+        populateSettingsForm();
+        els.settingsError.textContent = "Couldn't load current settings. Close and try again.";
+      }
+    }
+
+    function closeSettings() {
+      els.settingsBackdrop.classList.remove("open");
+    }
+
+    function buildBgGrid(selectedUrl) {
+      els.bgGrid.innerHTML = "";
+      for (const preset of BACKGROUND_PRESETS) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "bg-option" + (preset.url === selectedUrl ? " selected" : "");
+        btn.title = preset.name;
+        btn.style.backgroundImage = `url("${preset.url.replace("w=2400", "w=400")}")`;
+        btn.addEventListener("click", () => {
+          els.bgInput.value = "";
+          buildBgGrid(preset.url);
+        });
+        btn.dataset.url = preset.url;
+        els.bgGrid.appendChild(btn);
+      }
+    }
+
+    function selectedBackground() {
+      const custom = els.bgInput.value.trim();
+      if (custom) return custom;
+      const chosen = els.bgGrid.querySelector(".bg-option.selected");
+      return chosen ? chosen.dataset.url : "";
+    }
+
+    async function geocodeCity(name) {
+      const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=1`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const hit = data.results && data.results[0];
+      if (!hit) throw new Error(`Couldn't find "${name}". Try another city name.`);
+      return { city: hit.name, latitude: hit.latitude, longitude: hit.longitude };
+    }
+
+    async function saveSettings() {
+      els.settingsError.textContent = "";
+      els.saveBtn.disabled = true;
+      try {
+        const updates = {
+          ics_url: els.icsInput.value.trim(),
+          background: selectedBackground()
+        };
+
+        const cityName = els.cityInput.value.trim();
+        if (cityName && cityName !== config.display_city) {
+          const place = await geocodeCity(cityName);
+          updates.display_city = place.city;
+          updates.weather = { latitude: place.latitude, longitude: place.longitude };
+        }
+
+        const res = await fetch("/api/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updates)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Could not save settings.");
+
+        config = data;
+        applyBackground();
+        updateWeather();
+        refreshCalendar();
+        closeSettings();
+      } catch (error) {
+        els.settingsError.textContent = error.message || String(error);
+      } finally {
+        els.saveBtn.disabled = false;
+      }
+    }
+
     function escapeHtml(value) {
       return String(value)
         .replaceAll("&", "&amp;")
@@ -563,8 +985,18 @@
       return escapeHtml(value).replaceAll("`", "&#096;");
     }
 
-    els.refreshBtn.addEventListener("click", refreshCalendar);
+    els.icsInput.addEventListener("input", scheduleIcsValidation);
     els.fullscreenBtn.addEventListener("click", toggleFullscreen);
+    document.addEventListener("fullscreenchange", syncFullscreenIcon);
+    els.editBtn.addEventListener("click", openSettings);
+    els.cancelBtn.addEventListener("click", closeSettings);
+    els.saveBtn.addEventListener("click", saveSettings);
+    els.settingsBackdrop.addEventListener("click", e => {
+      if (e.target === els.settingsBackdrop) closeSettings();
+    });
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") closeSettings();
+    });
 
     let hideTimer;
     window.addEventListener("mousemove", () => {
@@ -574,11 +1006,19 @@
     });
 
     updateClock();
-    updateWeather();
+    loadConfig();
     refreshCalendar();
     setInterval(updateClock, 1000);
     setInterval(updateWeather, 15 * 60 * 1000);
-    setInterval(refreshCalendar, 5 * 60 * 1000);
+    // Poll the feed every minute (cheap: the server re-fetches the ICS link on
+    // each request). Freshness beyond this is limited by how often Microsoft
+    // regenerates the published feed, not by us.
+    setInterval(refreshCalendar, 60 * 1000);
+    // Also refresh the moment the tab becomes visible again, so waking the
+    // display or switching back to it never shows stale data.
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) refreshCalendar();
+    });
     // Re-render from cached data between fetches so the hero countdown ticks,
     // finished events fall away, and the offline note ages in real time.
     setInterval(() => { if (state.lastUpdated) render(); }, 30 * 1000);

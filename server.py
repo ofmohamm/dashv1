@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sys
+import time as time_module
 import urllib.parse
 import urllib.request
 from datetime import date, datetime, time, timedelta, timezone
@@ -16,7 +17,13 @@ from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = ROOT / "config.json"
-EXAMPLE_CONFIG_PATH = ROOT / "config.example.json"
+
+DEFAULT_CONFIG = {
+    "ics_url": "",
+    "timezone": "America/New_York",
+    "display_city": "Syracuse",
+    "weather": {"latitude": 43.0481, "longitude": -76.1474},
+}
 
 PLACEHOLDER_URLS = {"", "PASTE_ICS_LINK_HERE"}
 
@@ -48,14 +55,33 @@ MAX_LOOKAHEAD_DAYS = 7
 
 
 def load_config() -> dict:
-    path = CONFIG_PATH if CONFIG_PATH.exists() else EXAMPLE_CONFIG_PATH
-    with path.open("r", encoding="utf-8") as f:
+    if not CONFIG_PATH.exists():
+        return dict(DEFAULT_CONFIG)
+    with CONFIG_PATH.open("r", encoding="utf-8") as f:
         return json.load(f)
 
 
 def configured_url(config: dict) -> str:
     url = str(config.get("ics_url", "")).strip()
-    return "" if url in PLACEHOLDER_URLS else url
+    if url in PLACEHOLDER_URLS:
+        return ""
+    # Normalize at read time too, so a hand-edited config.json with a
+    # webcal:// or .html link works the same as one saved through the UI.
+    return normalize_ics_url(url)
+
+
+def normalize_ics_url(url: str) -> str:
+    """Accept whatever the user pasted and coerce it into a fetchable ICS URL.
+
+    Handles webcal:// links, the published calendar's HTML variant, and stray
+    quotes/whitespace, so users don't need to know what an "ICS link" is.
+    """
+    url = url.strip().strip("\"'").strip()
+    if url.lower().startswith("webcal://"):
+        url = "https://" + url[len("webcal://"):]
+    if url.lower().endswith("calendar.html"):
+        url = url[: -len("calendar.html")] + "calendar.ics"
+    return url
 
 
 def get_zone(config: dict) -> ZoneInfo:
@@ -73,6 +99,22 @@ def fetch_ics(ics_url: str) -> str:
     with urllib.request.urlopen(req, timeout=20) as res:
         charset = res.headers.get_content_charset() or "utf-8"
         return res.read().decode(charset, errors="replace")
+
+
+# Single-slot TTL cache so the dashboard's 1-minute poll doesn't hammer the
+# feed host with a fresh download on every request. validate_ics bypasses it
+# deliberately — a user testing a pasted link should get a live answer.
+ICS_CACHE_TTL_SECONDS = 55
+_ics_cache: dict = {"url": None, "fetched_at": 0.0, "raw": ""}
+
+
+def fetch_ics_cached(ics_url: str) -> str:
+    now = time_module.monotonic()
+    if _ics_cache["url"] == ics_url and now - _ics_cache["fetched_at"] < ICS_CACHE_TTL_SECONDS:
+        return _ics_cache["raw"]
+    raw = fetch_ics(ics_url)
+    _ics_cache.update(url=ics_url, fetched_at=now, raw=raw)
+    return raw
 
 
 def unfold_ics_lines(raw: str) -> list[str]:
@@ -337,18 +379,21 @@ def events_for_day(parsed_events: list[dict], day: date, zone: ZoneInfo) -> list
 def today_events(config: dict) -> dict:
     zone = get_zone(config)
     ics_url = configured_url(config)
+    # "today" is computed in the configured timezone and sent to the client,
+    # so day labels and countdowns don't depend on the browser's OS clock.
+    base_day = datetime.now(zone).date()
     if not ics_url:
         return {
             "status": "sample mode",
             "configured": False,
-            "message": "Paste your Outlook ICS link into config.json.",
+            "message": "Connect your Outlook calendar to replace this sample data.",
+            "today": base_day.isoformat(),
             "events": sample_events(zone),
         }
 
-    raw_ics = fetch_ics(ics_url)
+    raw_ics = fetch_ics_cached(ics_url)
     parsed_events = parse_ics(raw_ics)
     now = datetime.now(zone)
-    base_day = now.date()
 
     def upcoming_count(items: list[dict]) -> int:
         return sum(1 for e in items if datetime.fromisoformat(e["end"]) > now)
@@ -366,6 +411,7 @@ def today_events(config: dict) -> dict:
         "status": "live ICS",
         "configured": True,
         "message": "",
+        "today": base_day.isoformat(),
         "events": events,
     }
 
@@ -393,6 +439,59 @@ def sample_events(zone: ZoneInfo) -> list[dict]:
     ]
 
 
+# Settings the dashboard's edit panel is allowed to change.
+EDITABLE_CONFIG_KEYS = {"ics_url", "display_city", "weather", "background"}
+
+
+def public_config(config: dict) -> dict:
+    return {
+        "ics_url": configured_url(config),
+        "display_city": config.get("display_city", DEFAULT_CONFIG["display_city"]),
+        "weather": config.get("weather", DEFAULT_CONFIG["weather"]),
+        "background": config.get("background", ""),
+    }
+
+
+def save_config(updates: dict) -> dict:
+    config = load_config()
+    for key in EDITABLE_CONFIG_KEYS & updates.keys():
+        config[key] = updates[key]
+    if "ics_url" in updates:
+        config["ics_url"] = normalize_ics_url(str(updates["ics_url"]))
+    with CONFIG_PATH.open("w", encoding="utf-8") as f:
+        json.dump(config, f, indent=2)
+        f.write("\n")
+    return config
+
+
+def validate_ics(url: str) -> dict:
+    """Try a pasted link and report back in plain English."""
+    normalized = normalize_ics_url(url)
+    if not normalized:
+        return {"ok": False, "message": "Paste the link Outlook gave you."}
+    if not normalized.lower().startswith(("https://", "http://")):
+        return {"ok": False, "message": "That doesn't look like a web link. It should start with https:// or webcal://."}
+
+    try:
+        raw = fetch_ics(normalized)
+    except Exception:
+        return {"ok": False, "message": "Couldn't reach that link. Double-check you copied the whole ICS link from Outlook."}
+
+    if "BEGIN:VCALENDAR" not in raw:
+        return {"ok": False, "message": "That link doesn't point to a calendar. In Outlook, copy the ICS link (not the HTML one)."}
+
+    config = load_config()
+    zone = get_zone(config)
+    parsed = parse_ics(raw)
+    today = datetime.now(zone).date()
+    upcoming = sum(
+        len(expand_event_for_day(event, today + timedelta(days=offset), zone))
+        for event in parsed
+        for offset in range(7)
+    )
+    return {"ok": True, "url": normalized, "total": len(parsed), "upcoming": upcoming}
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "LocalDashboard/1.0"
 
@@ -400,6 +499,9 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == "/api/events":
             self.handle_events()
+            return
+        if parsed.path == "/api/config":
+            self.send_json(public_config(load_config()))
             return
         if parsed.path in {"/", "/index.html"}:
             self.serve_file(ROOT / "index.html", "text/html; charset=utf-8")
@@ -409,6 +511,24 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         self.send_error(HTTPStatus.NOT_FOUND)
+
+    def do_POST(self) -> None:
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path not in {"/api/config", "/api/validate-ics"}:
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            body = json.loads(self.rfile.read(length).decode("utf-8"))
+            if not isinstance(body, dict):
+                raise ValueError("Expected a JSON object.")
+            if parsed.path == "/api/validate-ics":
+                self.send_json(validate_ics(str(body.get("url", ""))))
+            else:
+                config = save_config(body)
+                self.send_json(public_config(config))
+        except Exception as error:
+            self.send_json({"message": str(error)}, status=HTTPStatus.BAD_REQUEST)
 
     def handle_events(self) -> None:
         try:
