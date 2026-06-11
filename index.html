@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Syracuse Dashboard</title>
+  <style>
+    :root {
+      --text: rgba(255, 255, 255, 0.94);
+      --muted: rgba(255, 255, 255, 0.68);
+      --faint: rgba(255, 255, 255, 0.18);
+      --card: rgba(12, 22, 34, 0.42);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --shadow: rgba(0, 0, 0, 0.28);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(177, 190, 201, 0.25), rgba(10, 20, 32, 0.72)),
+        linear-gradient(90deg, rgba(9, 16, 26, 0.25), rgba(9, 16, 26, 0.1)),
+        url("https://images.unsplash.com/photo-1473773508845-188df298d2d1?auto=format&fit=crop&w=2400&q=85");
+      background-size: cover;
+      background-position: center;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.07), transparent 23rem),
+        linear-gradient(180deg, rgba(2, 8, 16, 0.05), rgba(2, 8, 16, 0.62));
+      pointer-events: none;
+    }
+
+    .dashboard {
+      position: relative;
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(2rem, 1fr) minmax(24rem, 42rem) minmax(19rem, 24rem) minmax(2rem, 1fr);
+      align-items: center;
+      gap: clamp(2rem, 5vw, 5rem);
+      padding: clamp(1rem, 3vw, 3rem);
+    }
+
+    .centerpiece {
+      grid-column: 2;
+      text-align: center;
+      transform: translateY(-0.8rem);
+      text-shadow: 0 1rem 3rem var(--shadow);
+    }
+
+    .time {
+      font-size: clamp(5rem, 10vw, 8.8rem);
+      line-height: 0.95;
+      font-weight: 750;
+      letter-spacing: -0.08em;
+    }
+
+    .meta {
+      margin-top: 1.2rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.7rem;
+      font-size: clamp(1.05rem, 1.8vw, 1.55rem);
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .weather-icon {
+      width: 1.45rem;
+      height: 1.45rem;
+      opacity: 0.86;
+    }
+
+    .agenda-card {
+      grid-column: 3;
+      width: min(100%, 23.5rem);
+      justify-self: center;
+      border: 1px solid var(--card-border);
+      border-radius: 1.6rem;
+      background: var(--card);
+      backdrop-filter: blur(24px) saturate(125%);
+      box-shadow: 0 2rem 7rem var(--shadow);
+      padding: 1.35rem;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .eyebrow {
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .date {
+      margin-top: 0.18rem;
+      font-size: 1.35rem;
+      font-weight: 720;
+      letter-spacing: -0.03em;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 0.82rem;
+      white-space: nowrap;
+      padding-top: 0.15rem;
+    }
+
+    .events {
+      display: grid;
+      gap: 0.7rem;
+      max-height: 27rem;
+      overflow: auto;
+      padding-right: 0.15rem;
+      scrollbar-width: none;
+    }
+
+    .events::-webkit-scrollbar { display: none; }
+
+    .event {
+      display: grid;
+      grid-template-columns: 4.45rem 1fr;
+      gap: 0.85rem;
+      align-items: start;
+      padding: 0.82rem 0;
+      border-top: 1px solid var(--faint);
+      color: inherit;
+      text-decoration: none;
+      border-radius: 0.7rem;
+    }
+
+    .event:first-child { border-top: 0; }
+
+    .event.has-link { cursor: pointer; }
+
+    .event.has-link:hover .event-title { text-decoration: underline; }
+
+    .event-time {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.35;
+      font-variant-numeric: tabular-nums;
+      white-space: pre-line;
+    }
+
+    .event-title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .event-title {
+      font-size: 1rem;
+      font-weight: 670;
+      letter-spacing: -0.02em;
+      line-height: 1.22;
+    }
+
+    .join-chip {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      padding: 0.12rem 0.42rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .event-location {
+      margin-top: 0.25rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.3;
+    }
+
+    .empty {
+      border-top: 1px solid var(--faint);
+      padding: 1.25rem 0 0.2rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .empty strong {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .empty code {
+      color: var(--text);
+      font-size: 0.78rem;
+      overflow-wrap: anywhere;
+    }
+
+    .controls {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      display: flex;
+      gap: 0.55rem;
+      opacity: 0.28;
+      transition: opacity 180ms ease;
+    }
+
+    .controls:hover { opacity: 1; }
+
+    button {
+      color: var(--text);
+      background: rgba(10, 20, 32, 0.36);
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      padding: 0.55rem 0.85rem;
+      font: inherit;
+      font-size: 0.82rem;
+      cursor: pointer;
+      backdrop-filter: blur(16px);
+    }
+
+    button:hover { background: rgba(10, 20, 32, 0.55); }
+
+    .hint {
+      position: fixed;
+      left: 1rem;
+      bottom: 1rem;
+      color: rgba(255, 255, 255, 0.64);
+      font-size: 0.78rem;
+      text-shadow: 0 1rem 2rem rgba(0,0,0,0.55);
+    }
+
+    .hide-ui .controls,
+    .hide-ui .hint {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @media (max-width: 980px) {
+      body { overflow: auto; }
+      .dashboard {
+        grid-template-columns: 1fr;
+        align-content: center;
+        padding-block: 5rem;
+      }
+      .centerpiece,
+      .agenda-card { grid-column: 1; }
+      .agenda-card { width: min(92vw, 25rem); }
+    }
+  </style>
+</head>
+<body>
+  <main class="dashboard">
+    <section class="centerpiece" aria-label="Clock and weather">
+      <div class="time" id="time">--:--</div>
+      <div class="meta">
+        <span id="city">Syracuse</span>
+        <svg class="weather-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M7.8 18.5h9.1a4.1 4.1 0 0 0 .3-8.2 6 6 0 0 0-11.6 1.5A3.4 3.4 0 0 0 7.8 18.5Z" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span id="temp">--°</span>
+      </div>
+    </section>
+
+    <aside class="agenda-card" aria-label="Today's Outlook calendar">
+      <div class="card-header">
+        <div>
+          <div class="eyebrow">Outlook</div>
+          <div class="date" id="date">Today</div>
+        </div>
+        <div class="status" id="calendarStatus">loading</div>
+      </div>
+      <div class="events" id="events"></div>
+    </aside>
+  </main>
+
+  <div class="controls">
+    <button id="refreshBtn" type="button">Refresh</button>
+    <button id="fullscreenBtn" type="button">Fullscreen</button>
+  </div>
+  <div class="hint">Click a meeting event to open its link · Move cursor to top-right for controls · F11 also works</div>
+
+  <script>
+    const WEATHER = { city: "Syracuse", latitude: 43.0481, longitude: -76.1474 };
+
+    const els = {
+      time: document.getElementById("time"),
+      date: document.getElementById("date"),
+      temp: document.getElementById("temp"),
+      city: document.getElementById("city"),
+      events: document.getElementById("events"),
+      calendarStatus: document.getElementById("calendarStatus"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      fullscreenBtn: document.getElementById("fullscreenBtn")
+    };
+
+    function updateClock() {
+      const now = new Date();
+      els.time.textContent = now.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      }).replace(/\s?(AM|PM)$/i, "");
+      els.date.textContent = now.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric"
+      });
+    }
+
+    async function updateWeather() {
+      els.city.textContent = WEATHER.city;
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${WEATHER.latitude}&longitude=${WEATHER.longitude}&current=temperature_2m&temperature_unit=fahrenheit`;
+        const res = await fetch(url);
+        const data = await res.json();
+        els.temp.textContent = `${Math.round(data.current.temperature_2m)}°`;
+      } catch {
+        els.temp.textContent = "--°";
+      }
+    }
+
+    function formatEventTime(event) {
+      if (event.isAllDay) return "All day";
+      const start = new Date(event.start);
+      const end = new Date(event.end);
+      const opts = { hour: "numeric", minute: "2-digit", hour12: true };
+      const clean = date => date.toLocaleTimeString("en-US", opts).replace(/\s?(AM|PM)$/i, "");
+      return `${clean(start)}\n${clean(end)}`;
+    }
+
+    function renderEvents(events) {
+      if (!events.length) {
+        renderMessage("No events today.");
+        return;
+      }
+
+      els.events.innerHTML = events.map(event => {
+        const loc = event.location ? `<div class="event-location">${escapeHtml(event.location)}</div>` : "";
+        const join = event.meetingUrl ? `<span class="join-chip">open</span>` : "";
+        const body = `
+          <div class="event-time">${formatEventTime(event)}</div>
+          <div>
+            <div class="event-title-row">
+              <div class="event-title">${escapeHtml(event.subject || "Untitled")}</div>
+              ${join}
+            </div>
+            ${loc}
+          </div>
+        `;
+
+        if (event.meetingUrl) {
+          return `<a class="event has-link" href="${escapeAttr(event.meetingUrl)}" target="_blank" rel="noopener noreferrer">${body}</a>`;
+        }
+        return `<div class="event">${body}</div>`;
+      }).join("");
+    }
+
+    function renderMessage(message) {
+      els.events.innerHTML = `<div class="empty">${message}</div>`;
+    }
+
+    async function refreshCalendar() {
+      els.calendarStatus.textContent = "loading";
+      try {
+        const res = await fetch("/api/events", { cache: "no-store" });
+        const data = await res.json();
+        els.calendarStatus.textContent = data.status || (res.ok ? "live" : "error");
+        if (!res.ok) throw new Error(data.message || "Calendar failed to load.");
+        if (data.message && !data.configured) {
+          renderMessage(`<strong>ICS setup needed.</strong><br>${escapeHtml(data.message)}<br><br>Edit <code>config.json</code>, then refresh.`);
+          return;
+        }
+        renderEvents(data.events || []);
+      } catch (error) {
+        els.calendarStatus.textContent = "error";
+        renderMessage(`<strong>Calendar failed to load.</strong><br>${escapeHtml(error.message || String(error))}`);
+      }
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen?.();
+        document.body.classList.add("hide-ui");
+      } else {
+        document.exitFullscreen?.();
+        document.body.classList.remove("hide-ui");
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value).replaceAll("`", "&#096;");
+    }
+
+    els.refreshBtn.addEventListener("click", refreshCalendar);
+    els.fullscreenBtn.addEventListener("click", toggleFullscreen);
+
+    let hideTimer;
+    window.addEventListener("mousemove", () => {
+      document.body.classList.remove("hide-ui");
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => document.body.classList.add("hide-ui"), 3000);
+    });
+
+    updateClock();
+    updateWeather();
+    refreshCalendar();
+    setInterval(updateClock, 1000);
+    setInterval(updateWeather, 15 * 60 * 1000);
+    setInterval(refreshCalendar, 5 * 60 * 1000);
+  </script>
+</body>
+</html>
