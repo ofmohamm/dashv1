@@ -1,6 +1,6 @@
 # Dash v1
 
-A privacy-first desktop dashboard for a secondary display, showing time, weather, and upcoming Outlook calendar events from a local web server.
+A privacy-first desktop dashboard for a secondary display. Showcases time, weather, and upcoming Outlook calendar events from a local web server.
 
 ### Features
 
