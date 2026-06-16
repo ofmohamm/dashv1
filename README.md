@@ -55,6 +55,7 @@ powershell -ExecutionPolicy Bypass -File scripts\uninstall-windows.ps1
 
 ## Notes
 
+- Use Windows PowerToys to lock this tab on your secondary display
 - Your settings are saved privately to `config.json`.
 - Outlook regenerates published calendar feeds on its own schedule, so a
   brand-new event can take a while to appear.
