@@ -500,6 +500,22 @@ def expand_event_for_day(event: dict, day: date, default_zone: ZoneInfo) -> list
     return [make_item(occurrence_start, occurrence_end)]
 
 
+def unwrap_safelink(url: str) -> str:
+    """Undo Microsoft Defender 'Safe Links' wrapping.
+
+    Corporate M365 rewrites every invite URL into
+    https://<region>.safelinks.protection.outlook.com/?url=<encoded original>.
+    Without unwrapping, the real Teams join link is invisible to us and we'd
+    fall back to whatever generic link came first (often a help article).
+    """
+    parsed = urllib.parse.urlparse(url)
+    if parsed.netloc.lower().endswith("safelinks.protection.outlook.com"):
+        target = urllib.parse.parse_qs(parsed.query).get("url", [""])[0]
+        if target:
+            return target
+    return url
+
+
 def find_meeting_url(event: dict) -> str:
     text_parts = []
     for field in TEXT_FIELDS_FOR_LINKS:
@@ -508,7 +524,13 @@ def find_meeting_url(event: dict) -> str:
 
     text_blob = html.unescape("\n".join(text_parts))
     urls = re.findall(r"https?://[^\s<>\"']+", text_blob)
-    cleaned_urls = [u.rstrip(".,;)]}>") for u in urls]
+    cleaned_urls = [unwrap_safelink(u.rstrip(".,;)]}>")) for u in urls]
+
+    # Prefer the actual Teams "join meeting" deep link over meeting-options,
+    # download, or help links that share the teams.microsoft.com domain.
+    for url in cleaned_urls:
+        if "teams.microsoft.com" in url.lower() and "meetup-join" in url.lower():
+            return url
 
     for domain in MEETING_DOMAIN_PRIORITY:
         for url in cleaned_urls:

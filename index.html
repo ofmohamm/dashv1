@@ -700,9 +700,20 @@
 
       const cls = `event${featured ? " featured" : ""}${event.meetingUrl ? " has-link" : ""}`;
       if (event.meetingUrl) {
-        return `<a class="${cls}" href="${escapeAttr(event.meetingUrl)}" target="_blank" rel="noopener noreferrer">${body}</a>`;
+        const href = meetingHref(event.meetingUrl);
+        // App-protocol links (msteams:) hand off to the desktop app, so they
+        // shouldn't open a blank browser tab; web links still do.
+        const attrs = href.startsWith("msteams:") ? "" : ` target="_blank" rel="noopener noreferrer"`;
+        return `<a class="${cls}" href="${escapeAttr(href)}"${attrs}>${body}</a>`;
       }
       return `<div class="${cls}">${body}</div>`;
+    }
+
+    // Open Teams meetings in the desktop app instead of the web launcher page
+    // by swapping the web origin for the msteams: protocol handler.
+    function meetingHref(url) {
+      const m = url.match(/^https:\/\/teams\.microsoft\.com\/(l\/meetup-join\/.+)$/i);
+      return m ? `msteams:/${m[1]}` : url;
     }
 
     function renderAgenda(allEvents) {
