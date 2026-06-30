@@ -683,24 +683,70 @@
       return "Next";
     }
 
+    const PIN_ICON = `<span class="event-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M12 21s-6-5.2-6-10a6 6 0 1 1 12 0c0 4.8-6 10-6 10Z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="11" r="2.1" stroke="currentColor" stroke-width="1.7"/></svg></span>`;
+    const CHEVRON_ICON = `<span class="event-chevron" aria-hidden="true">›</span>`;
+
+    // Phrases Outlook puts in LOCATION for online meetings — don't try to map
+    // these (or anything that's actually a URL / empty).
+    const ONLINE_LOCATION_RE = /microsoft teams|teams meeting|zoom|google meet|webex|gotomeeting|skype|bluejeans|^https?:/i;
+
+    function isMappable(location) {
+      return Boolean(location && location.trim() && !ONLINE_LOCATION_RE.test(location));
+    }
+
+    function mapsUrl(location) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
+    }
+
+    // Open meetings in their desktop app where a protocol handler exists
+    // (Teams, Zoom); everything else stays a normal web link.
+    function meetingHref(url) {
+      const teams = url.match(/^https:\/\/teams\.microsoft\.com\/(l\/meetup-join\/.+)$/i);
+      if (teams) return `msteams:/${teams[1]}`;
+
+      const zoom = url.match(/^https:\/\/[\w.-]*zoom\.us\/(?:j|w)\/(\d+)/i);
+      if (zoom) {
+        const pwd = (url.match(/[?&]pwd=([^&]+)/) || [])[1];
+        return `zoommtg://zoom.us/join?action=join&confno=${zoom[1]}${pwd ? `&pwd=${pwd}` : ""}`;
+      }
+      return url;
+    }
+
+    // Decide what clicking an event does: join an online meeting if there is
+    // one, otherwise map the in-person location.
+    function eventLink(event) {
+      if (event.meetingUrl) {
+        const href = meetingHref(event.meetingUrl);
+        const isApp = href.startsWith("msteams:") || href.startsWith("zoommtg:");
+        return { href, marker: CHEVRON_ICON, external: !isApp };
+      }
+      if (isMappable(event.location)) {
+        return { href: mapsUrl(event.location), marker: PIN_ICON, external: true };
+      }
+      return null;
+    }
+
     function renderEventHtml(event, featured) {
       const loc = event.location ? `<div class="event-location">${escapeHtml(event.location)}</div>` : "";
-      const chevron = event.meetingUrl ? `<span class="event-chevron" aria-hidden="true">›</span>` : "";
+      const link = eventLink(event);
       const status = featured ? `<div class="event-status">${escapeHtml(statusLabel(event))}</div>` : "";
       const body = `
         ${status}
         <div class="event-title-row">
           <span class="event-dot" aria-hidden="true"></span>
           <div class="event-title">${escapeHtml(event.subject || "Untitled")}</div>
-          ${chevron}
+          ${link ? link.marker : ""}
         </div>
         <div class="event-time">${formatEventTime(event)}</div>
         ${loc}
       `;
 
-      const cls = `event${featured ? " featured" : ""}${event.meetingUrl ? " has-link" : ""}`;
-      if (event.meetingUrl) {
-        return `<a class="${cls}" href="${escapeAttr(event.meetingUrl)}" target="_blank" rel="noopener noreferrer">${body}</a>`;
+      const cls = `event${featured ? " featured" : ""}${link ? " has-link" : ""}`;
+      if (link) {
+        // App-protocol links hand off to a desktop app, so they shouldn't open
+        // a blank browser tab; web links (maps, Zoom/Meet web) still do.
+        const attrs = link.external ? ` target="_blank" rel="noopener noreferrer"` : "";
+        return `<a class="${cls}" href="${escapeAttr(link.href)}"${attrs}>${body}</a>`;
       }
       return `<div class="${cls}">${body}</div>`;
     }
